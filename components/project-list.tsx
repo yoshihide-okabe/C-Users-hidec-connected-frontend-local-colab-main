@@ -1,12 +1,46 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ThumbsUp, ThumbsDown, MessageSquare, Star, Clock, ChevronRight } from "lucide-react"
+import Link from "next/link";
+import Image from "next/image";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { Bookmark, Star, ArrowRight } from "lucide-react";
+//以下は最初からあったもの
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
+
+// プロジェクトの型定義
+export interface Project {
+  id: number;
+  title: string;
+  owner: string;
+  updatedAt: Date;
+  category: string;
+  isFavorite: boolean;
+  description: string;
+}
+
+interface ProjectListProps {
+  type: "new" | "favorite";
+  onSelectProject?: (project: Project) => void;
+  selectedProjectId?: number | null;
+}
 
 // 動物の種類に基づいた背景色を取得する関数
 function getAnimalColor(animal: string) {
@@ -25,9 +59,9 @@ function getAnimalColor(animal: string) {
     イヌ: "bg-yellow-700",
     ネコ: "bg-gray-600",
     ライオン: "bg-yellow-600",
-  }
+  };
 
-  return colors[animal] || "bg-lightgreen-500"
+  return colors[animal] || "bg-lightgreen-500";
 }
 
 // カテゴリに基づいた色を取得する関数
@@ -44,9 +78,9 @@ function getCategoryColor(category: string) {
     スポーツ: "bg-orange-500",
     文化: "bg-indigo-500",
     子育て: "bg-rose-500",
-  }
+  };
 
-  return colors[category] || "bg-lightgreen-500"
+  return colors[category] || "bg-lightgreen-500";
 }
 
 // カテゴリに基づいたバッジスタイルを取得する関数
@@ -63,19 +97,22 @@ function getCategoryBadgeStyle(category: string) {
     スポーツ: "bg-orange-50 text-orange-700 border-orange-200",
     文化: "bg-indigo-50 text-indigo-700 border-indigo-200",
     子育て: "bg-rose-50 text-rose-700 border-rose-200",
-  }
+  };
 
-  return styles[category] || "bg-lightgreen-50 text-lightgreen-700 border-lightgreen-200"
+  return (
+    styles[category] ||
+    "bg-lightgreen-50 text-lightgreen-700 border-lightgreen-200"
+  );
 }
 
-type ProjectType = "new" | "favorite"
+type ProjectType = "new" | "favorite";
 
 interface ProjectListProps {
-  type: ProjectType
+  type: ProjectType;
 }
 
 export function ProjectList({ type }: ProjectListProps) {
-  const [selectedProject, setSelectedProject] = useState<string | null>(null)
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
   // プロジェクトデータ内の名前を動物の名前に変更します
 
@@ -183,7 +220,20 @@ export function ProjectList({ type }: ProjectListProps) {
             createdAt: "4日前",
             isFavorite: true,
           },
-        ]
+        ];
+
+  // タイプに応じてフィルタリング
+  const filteredProjects =
+    type === "favorite"
+      ? projects.filter((project) => project.isFavorite)
+      : projects;
+
+  // プロジェクト選択時の処理
+  const handleProjectClick = (project: Project) => {
+    if (onSelectProject) {
+      onSelectProject(project);
+    }
+  };
 
   return (
     <div className="relative">
@@ -204,23 +254,35 @@ export function ProjectList({ type }: ProjectListProps) {
             <Card
               key={project.id}
               className={`cursor-pointer transition-all rounded-2xl border-lightgreen-200 bg-white hover:shadow-md hover:-translate-y-1 flex-shrink-0 w-[260px] overflow-hidden ${
-                selectedProject === project.id ? "ring-2 ring-lightgreen-400 shadow-lg" : "shadow-sm"
+                selectedProject === project.id
+                  ? "ring-2 ring-lightgreen-400 shadow-lg"
+                  : "shadow-sm"
               }`}
               onClick={() => setSelectedProject(project.id)}
             >
-              <div className={`h-1 w-full ${getCategoryColor(project.category)}`} />
+              <div
+                className={`h-1 w-full ${getCategoryColor(project.category)}`}
+              />
               <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
                       <AvatarImage src={project.avatar} alt={project.author} />
-                      <AvatarFallback className={`text-white font-semibold ${getAnimalColor(project.author)}`}>
+                      <AvatarFallback
+                        className={`text-white font-semibold ${getAnimalColor(
+                          project.author
+                        )}`}
+                      >
                         {project.author.substring(0, 1)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-base text-lightgreen-800 line-clamp-1">{project.title}</CardTitle>
-                      <div className="text-xs text-lightgreen-600">{project.author}</div>
+                      <CardTitle className="text-base text-lightgreen-800 line-clamp-1">
+                        {project.title}
+                      </CardTitle>
+                      <div className="text-xs text-lightgreen-600">
+                        {project.author}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -229,7 +291,9 @@ export function ProjectList({ type }: ProjectListProps) {
                 <div className="flex justify-between items-start mb-2">
                   <Badge
                     variant="outline"
-                    className={`text-xs border-lightgreen-200 ${getCategoryBadgeStyle(project.category)}`}
+                    className={`text-xs border-lightgreen-200 ${getCategoryBadgeStyle(
+                      project.category
+                    )}`}
                   >
                     {project.category}
                   </Badge>
@@ -279,7 +343,10 @@ export function ProjectList({ type }: ProjectListProps) {
                         : "border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100"
                     }`}
                   >
-                    <Star className="h-3 w-3" fill={project.isFavorite ? "currentColor" : "none"} />
+                    <Star
+                      className="h-3 w-3"
+                      fill={project.isFavorite ? "currentColor" : "none"}
+                    />
                     <span className="sr-only">お気に入り</span>
                   </Button>
                 </div>
@@ -289,6 +356,5 @@ export function ProjectList({ type }: ProjectListProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

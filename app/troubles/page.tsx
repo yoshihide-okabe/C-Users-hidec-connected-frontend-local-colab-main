@@ -1,10 +1,77 @@
-import Link from "next/link"
-import { TroubleList } from "@/components/trouble-list"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, Bell } from "lucide-react"
-import { MobileNav } from "@/components/mobile-nav"
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { TroubleList } from "@/components/trouble-list";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, Bell } from "lucide-react";
+import { MobileNav } from "@/components/mobile-nav";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TroublesPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [projectInfo, setProjectInfo] = useState({
+    id: "",
+    title: "",
+    description: "",
+  });
+  const [userInfo, setUserInfo] = useState({
+    id: "",
+    name: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // ローカルストレージからプロジェクト情報とユーザー情報を取得
+    const projectId = localStorage.getItem("selectedProjectId");
+    const projectTitle = localStorage.getItem("selectedProjectTitle");
+    const projectDescription = localStorage.getItem(
+      "selectedProjectDescription"
+    );
+    const userId =
+      localStorage.getItem("currentUserId") || localStorage.getItem("userId");
+    const userName =
+      localStorage.getItem("currentUserName") ||
+      localStorage.getItem("userName");
+
+    // プロジェクトが選択されていない場合はホーム画面にリダイレクト
+    if (!projectId || !projectTitle) {
+      toast({
+        title: "プロジェクトが選択されていません",
+        description: "ホーム画面からプロジェクトを選択してください",
+        variant: "destructive",
+      });
+      router.push("/");
+      return;
+    }
+
+    // 取得した情報をステートに設定
+    setProjectInfo({
+      id: projectId,
+      title: projectTitle,
+      description: projectDescription || "詳細情報がありません",
+    });
+
+    if (userId && userName) {
+      setUserInfo({
+        id: userId,
+        name: userName,
+      });
+    }
+
+    setIsLoading(false);
+  }, [router, toast]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-b from-lightgreen-50 to-white">
+        <div className="text-lightgreen-700">読み込み中...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-20 bg-gradient-to-b from-lightgreen-50 to-white">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-lightgreen-200 px-4 py-3 shadow-sm">
@@ -19,7 +86,9 @@ export default function TroublesPage() {
                 <ChevronLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold text-lightgreen-800">お困りごとリスト</h1>
+            <h1 className="text-xl font-bold text-lightgreen-800">
+              お困りごとリスト
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -34,7 +103,9 @@ export default function TroublesPage() {
               size="icon"
               className="rounded-full overflow-hidden border-2 border-lightgreen-200 p-0"
             >
-              <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">キ</div>
+              <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">
+                キ
+              </div>
             </Button>
           </div>
         </div>
@@ -43,14 +114,20 @@ export default function TroublesPage() {
       <main className="px-4 py-4">
         <div className="mb-6">
           <div className="rounded-2xl border border-lightgreen-200 bg-white p-4 shadow-sm mb-4">
-            <h3 className="font-medium mb-2 text-lightgreen-800">プロジェクト情報</h3>
+            <h3 className="font-medium mb-2 text-lightgreen-800">
+              プロジェクト情報
+            </h3>
             <div className="space-y-2">
               <div>
-                <h4 className="font-medium text-sm text-lightgreen-800">オンライン学習プラットフォーム</h4>
+                <h4 className="font-medium text-sm text-lightgreen-800">
+                  オンライン学習プラットフォーム
+                </h4>
                 <p className="text-xs text-lightgreen-600">フクロウ</p>
               </div>
               <div>
-                <h5 className="text-xs font-medium text-lightgreen-700">プロジェクト概要</h5>
+                <h5 className="text-xs font-medium text-lightgreen-700">
+                  プロジェクト概要
+                </h5>
                 <p className="text-xs text-lightgreen-600">
                   誰でも簡単にオンラインで学べるプラットフォームを開発しています。特に教育格差の解消を目指しています。
                 </p>
@@ -63,19 +140,33 @@ export default function TroublesPage() {
 
         <div className="space-y-6">
           <div className="rounded-2xl border border-lightgreen-200 bg-white p-4 shadow-sm mb-6">
-            <h3 className="font-medium mb-2 text-lightgreen-800">活動ステータス</h3>
+            <h3 className="font-medium mb-2 text-lightgreen-800">
+              活動ステータス
+            </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-lightgreen-700">解決したお困りごと</span>
-                <span className="font-medium text-sm text-lightgreen-700">3件</span>
+                <span className="text-xs text-lightgreen-700">
+                  解決したお困りごと
+                </span>
+                <span className="font-medium text-sm text-lightgreen-700">
+                  3件
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-lightgreen-700">貢献ポイント</span>
-                <span className="font-medium text-sm text-lightgreen-700">120pt</span>
+                <span className="text-xs text-lightgreen-700">
+                  貢献ポイント
+                </span>
+                <span className="font-medium text-sm text-lightgreen-700">
+                  120pt
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-lightgreen-700">感謝された回数</span>
-                <span className="font-medium text-sm text-lightgreen-700">5回</span>
+                <span className="text-xs text-lightgreen-700">
+                  感謝された回数
+                </span>
+                <span className="font-medium text-sm text-lightgreen-700">
+                  5回
+                </span>
               </div>
             </div>
           </div>
@@ -90,6 +181,5 @@ export default function TroublesPage() {
 
       <MobileNav />
     </div>
-  )
+  );
 }
-

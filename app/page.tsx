@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { ProjectList } from "@/components/project-list";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Bell } from "lucide-react";
-import { MobileNav } from "@/components/mobile-nav";
-import { Trophy, MessageSquare, TagIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Bell, MessageSquare, Trophy, TagIcon } from "lucide-react";
+import { MobileNav } from "@/components/mobile-nav";
+import { ProjectList, Project } from "@/components/project-list";
+import { useToast } from "@/hooks/use-toast";
 
 // ランキングに基づいた色を取得する関数
 function getRankColor(rank: number) {
@@ -22,6 +22,8 @@ function getRankColor(rank: number) {
 
 export default function HomePage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   // ログイン状態をチェックして未ログインの場合にログインページに遷移
   useEffect(() => {
@@ -29,7 +31,54 @@ export default function HomePage() {
     if (!isLoggedIn) {
       router.push("/login"); // ログインしていない場合はログインページにリダイレクト
     }
+
+    // 保存されたプロジェクト情報を復元（必要に応じて）
+    const savedProjectId = localStorage.getItem("selectedProjectId");
+    if (savedProjectId) {
+      // 注: 実際の実装では、このIDを使ってプロジェクト詳細をAPIから取得する
+      // ここではダミーデータを使用しているので完全な復元は行わない
+    }
   }, [router]);
+
+  // プロジェクト選択時の処理
+  const handleProjectSelect = (project: Project) => {
+    setSelectedProject(project);
+
+    // ローカルストレージに保存
+    localStorage.setItem("selectedProjectId", project.id.toString());
+    localStorage.setItem("selectedProjectTitle", project.title);
+    localStorage.setItem("selectedProjectDescription", project.description);
+
+    // 選択通知
+    toast({
+      title: "プロジェクト選択",
+      description: `「${project.title}」を選択しました`,
+    });
+  };
+
+  // お困りごとリストへの遷移時の処理
+  const handleTroublesClick = () => {
+    // プロジェクトが選択されていなければアラート表示
+    if (!selectedProject) {
+      toast({
+        title: "選択が必要です",
+        description: "プロジェクトを選択してください",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 現在のユーザー情報を取得
+    const userId = localStorage.getItem("userId") || "";
+    const userName = localStorage.getItem("userName") || "";
+
+    // ユーザー情報をローカルストレージに保存
+    localStorage.setItem("currentUserId", userId);
+    localStorage.setItem("currentUserName", userName);
+
+    // お困りごとリスト画面に遷移
+    router.push("/troubles");
+  };
 
   return (
     <div className="pb-20 bg-gradient-to-b from-lightgreen-50 to-white">
@@ -60,6 +109,37 @@ export default function HomePage() {
       </header>
 
       <main className="px-4 py-4">
+        {/* 選択中のプロジェクト情報表示エリア */}
+        {selectedProject && (
+          <div className="mb-6 bg-white rounded-2xl border border-lightgreen-200 p-4 shadow-sm">
+            <h2 className="text-lg font-semibold mb-2 text-lightgreen-800">
+              選択中のプロジェクト
+            </h2>
+            <div className="bg-lightgreen-50 rounded-lg p-3 border border-lightgreen-200">
+              <h3 className="font-medium text-lightgreen-800">
+                {selectedProject.title}
+              </h3>
+              <p className="text-sm text-lightgreen-600 mt-1">
+                {selectedProject.description}
+              </p>
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-xs text-lightgreen-500">
+                  オーナー: {selectedProject.owner}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs border-lightgreen-300 text-lightgreen-700 hover:bg-lightgreen-100"
+                  onClick={handleTroublesClick}
+                >
+                  <MessageSquare className="mr-1 h-3 w-3" />
+                  お困りごとを見る
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-lightgreen-800">
