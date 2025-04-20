@@ -1,360 +1,191 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
-import { Bookmark, Star, ArrowRight } from "lucide-react";
-//以下は最初からあったもの
-import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ThumbsUp,
-  ThumbsDown,
-  MessageSquare,
-  Clock,
-  ChevronRight,
-} from "lucide-react";
 
-// プロジェクトの型定義
 export interface Project {
   id: number;
   title: string;
-  owner: string;
-  updatedAt: Date;
-  category: string;
-  isFavorite: boolean;
   description: string;
+  owner: string;
+  status: string;
+  category: string;
+  createdAt: string;
 }
 
 interface ProjectListProps {
   type: "new" | "favorite";
   onSelectProject?: (project: Project) => void;
-  selectedProjectId?: number | null;
 }
 
-// 動物の種類に基づいた背景色を取得する関数
-function getAnimalColor(animal: string) {
-  const colors: Record<string, string> = {
-    キツネ: "bg-orange-500",
-    パンダ: "bg-gray-800",
-    ウサギ: "bg-pink-400",
-    カメ: "bg-green-600",
-    ペンギン: "bg-blue-900",
-    フクロウ: "bg-amber-700",
-    クマ: "bg-brown-600",
-    ゾウ: "bg-gray-500",
-    シカ: "bg-amber-500",
-    タヌキ: "bg-gray-700",
-    コアラ: "bg-gray-400",
-    イヌ: "bg-yellow-700",
-    ネコ: "bg-gray-600",
-    ライオン: "bg-yellow-600",
-  };
+export function ProjectList({ type, onSelectProject }: ProjectListProps) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  return colors[animal] || "bg-lightgreen-500";
-}
+  useEffect(() => {
+    // 通常はAPIからプロジェクト一覧を取得するが、
+    // ここではダミーデータを使用する
+    const fetchProjects = async () => {
+      try {
+        // APIコール（実装時にコメントアウトを解除）
+        // const response = await fetch(`/api/projects/${type}`);
+        // const data = await response.json();
+        // setProjects(data);
 
-// カテゴリに基づいた色を取得する関数
-function getCategoryColor(category: string) {
-  const colors: Record<string, string> = {
-    テクノロジー: "bg-blue-500",
-    ビジネス: "bg-purple-500",
-    医療: "bg-red-500",
-    環境: "bg-green-500",
-    教育: "bg-yellow-500",
-    コミュニティ: "bg-pink-500",
-    農業: "bg-lime-500",
-    ワークスタイル: "bg-cyan-500",
-    スポーツ: "bg-orange-500",
-    文化: "bg-indigo-500",
-    子育て: "bg-rose-500",
-  };
+        // ダミーデータ（実際の実装時は削除）
+        setTimeout(() => {
+          const dummyProjects: Project[] = [
+            {
+              id: 1,
+              title: "オンライン学習プラットフォーム",
+              description:
+                "誰でも簡単にオンラインで学べるプラットフォームを開発しています。特に教育格差の解消を目指しています。",
+              owner: "フクロウ",
+              status: "active",
+              category: "教育",
+              createdAt: "2023-04-10T12:00:00Z",
+            },
+            {
+              id: 2,
+              title: "シニア向けスマホアプリ",
+              description:
+                "高齢者でも直感的に操作できるシンプルなインターフェースのアプリを開発します。",
+              owner: "タヌキ",
+              status: "active",
+              category: "ヘルスケア",
+              createdAt: "2023-04-12T09:30:00Z",
+            },
+            {
+              id: 3,
+              title: "地域コミュニティアプリ",
+              description:
+                "地域の情報共有と助け合いを促進するプラットフォームです。",
+              owner: "キツネ",
+              status: "active",
+              category: "コミュニティ",
+              createdAt: "2023-04-15T14:20:00Z",
+            },
+          ];
 
-  return colors[category] || "bg-lightgreen-500";
-}
+          // お気に入りとして2番目と3番目のプロジェクトを表示
+          if (type === "favorite") {
+            setProjects([dummyProjects[1], dummyProjects[2]]);
+          } else {
+            setProjects(dummyProjects);
+          }
 
-// カテゴリに基づいたバッジスタイルを取得する関数
-function getCategoryBadgeStyle(category: string) {
-  const styles: Record<string, string> = {
-    テクノロジー: "bg-blue-50 text-blue-700 border-blue-200",
-    ビジネス: "bg-purple-50 text-purple-700 border-purple-200",
-    医療: "bg-red-50 text-red-700 border-red-200",
-    環境: "bg-green-50 text-green-700 border-green-200",
-    教育: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    コミュニティ: "bg-pink-50 text-pink-700 border-pink-200",
-    農業: "bg-lime-50 text-lime-700 border-lime-200",
-    ワークスタイル: "bg-cyan-50 text-cyan-700 border-cyan-200",
-    スポーツ: "bg-orange-50 text-orange-700 border-orange-200",
-    文化: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    子育て: "bg-rose-50 text-rose-700 border-rose-200",
-  };
+          setIsLoading(false);
+        }, 500); // 読み込み時間をシミュレート
+      } catch (error) {
+        console.error(`Error fetching ${type} projects:`, error);
+        setIsLoading(false);
+      }
+    };
 
-  return (
-    styles[category] ||
-    "bg-lightgreen-50 text-lightgreen-700 border-lightgreen-200"
-  );
-}
+    fetchProjects();
+  }, [type]);
 
-type ProjectType = "new" | "favorite";
-
-interface ProjectListProps {
-  type: ProjectType;
-}
-
-export function ProjectList({ type }: ProjectListProps) {
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
-
-  // プロジェクトデータ内の名前を動物の名前に変更します
-
-  const projects =
-    type === "new"
-      ? [
-          {
-            id: "1",
-            title: "地域コミュニティアプリの開発",
-            author: "キツネ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "テクノロジー",
-            likes: 24,
-            comments: 8,
-            createdAt: "2時間前",
-            isFavorite: false,
-          },
-          {
-            id: "2",
-            title: "サステナブルファッションブランドの立ち上げ",
-            author: "パンダ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "ビジネス",
-            likes: 18,
-            comments: 5,
-            createdAt: "3時間前",
-            isFavorite: false,
-          },
-          {
-            id: "3",
-            title: "高齢者向け健康管理アプリ",
-            author: "ウサギ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "医療",
-            likes: 32,
-            comments: 12,
-            createdAt: "5時間前",
-            isFavorite: false,
-          },
-          {
-            id: "4",
-            title: "環境に優しい配送サービス",
-            author: "カメ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "環境",
-            likes: 15,
-            comments: 3,
-            createdAt: "8時間前",
-            isFavorite: false,
-          },
-          {
-            id: "5",
-            title: "子ども向けプログラミング教室",
-            author: "ペンギン",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "教育",
-            likes: 27,
-            comments: 9,
-            createdAt: "10時間前",
-            isFavorite: false,
-          },
-        ]
-      : [
-          {
-            id: "6",
-            title: "オンライン学習プラットフォーム",
-            author: "フクロウ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "教育",
-            likes: 45,
-            comments: 17,
-            createdAt: "1日前",
-            isFavorite: true,
-          },
-          {
-            id: "7",
-            title: "フードロス削減アプリ",
-            author: "クマ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "環境",
-            likes: 38,
-            comments: 9,
-            createdAt: "2日前",
-            isFavorite: true,
-          },
-          {
-            id: "8",
-            title: "シニア向けSNSサービス",
-            author: "ゾウ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "コミュニティ",
-            likes: 29,
-            comments: 14,
-            createdAt: "3日前",
-            isFavorite: true,
-          },
-          {
-            id: "9",
-            title: "地域特産品マーケットプレイス",
-            author: "シカ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "ビジネス",
-            likes: 33,
-            comments: 7,
-            createdAt: "4日前",
-            isFavorite: true,
-          },
-        ];
-
-  // タイプに応じてフィルタリング
-  const filteredProjects =
-    type === "favorite"
-      ? projects.filter((project) => project.isFavorite)
-      : projects;
-
-  // プロジェクト選択時の処理
   const handleProjectClick = (project: Project) => {
+    // プロジェクト選択のコールバックがある場合は実行
     if (onSelectProject) {
       onSelectProject(project);
     }
+
+    // ローカルストレージに情報を保存（親コンポーネントでも行っているが念のため）
+    localStorage.setItem("selectedProjectId", project.id.toString());
+    localStorage.setItem("selectedProjectTitle", project.title);
+    localStorage.setItem("selectedProjectDescription", project.description);
+    localStorage.setItem("selectedProjectOwner", project.owner);
+
+    console.log("Project clicked and saved:", {
+      id: project.id,
+      title: project.title,
+    });
   };
 
-  return (
-    <div className="relative">
-      <div className="flex justify-between items-center mb-2">
-        <div className="flex-1"></div>
-        <Link
-          href={`/projects/${type}`}
-          className="text-xs text-lightgreen-600 hover:text-lightgreen-800 flex items-center bg-white px-2 py-1 rounded-full shadow-sm"
-        >
-          もっと見る
-          <ChevronRight className="h-3 w-3 ml-1" />
-        </Link>
+  if (isLoading) {
+    return (
+      <div className="w-full py-6 flex justify-center">
+        <div className="text-lightgreen-600">読み込み中...</div>
       </div>
+    );
+  }
 
-      <div className="flex overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-lightgreen-200 scrollbar-track-transparent -mx-1 px-1">
-        <div className="flex gap-3">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className={`cursor-pointer transition-all rounded-2xl border-lightgreen-200 bg-white hover:shadow-md hover:-translate-y-1 flex-shrink-0 w-[260px] overflow-hidden ${
-                selectedProject === project.id
-                  ? "ring-2 ring-lightgreen-400 shadow-lg"
-                  : "shadow-sm"
-              }`}
-              onClick={() => setSelectedProject(project.id)}
+  if (projects.length === 0) {
+    return (
+      <div className="w-full py-6 bg-lightgreen-50 rounded-xl border border-lightgreen-200 flex flex-col items-center justify-center">
+        <p className="text-lightgreen-700 mb-2">
+          {type === "new"
+            ? "新着プロジェクトはありません"
+            : "お気に入りプロジェクトはありません"}
+        </p>
+        {type === "favorite" && (
+          <Link href="/projects/new">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-lightgreen-300 text-lightgreen-700 hover:bg-lightgreen-100"
             >
-              <div
-                className={`h-1 w-full ${getCategoryColor(project.category)}`}
-              />
-              <CardHeader className="pb-2 pt-3 px-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
-                      <AvatarImage src={project.avatar} alt={project.author} />
-                      <AvatarFallback
-                        className={`text-white font-semibold ${getAnimalColor(
-                          project.author
-                        )}`}
-                      >
-                        {project.author.substring(0, 1)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-base text-lightgreen-800 line-clamp-1">
-                        {project.title}
-                      </CardTitle>
-                      <div className="text-xs text-lightgreen-600">
-                        {project.author}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-2 px-3">
-                <div className="flex justify-between items-start mb-2">
-                  <Badge
-                    variant="outline"
-                    className={`text-xs border-lightgreen-200 ${getCategoryBadgeStyle(
-                      project.category
-                    )}`}
-                  >
-                    {project.category}
-                  </Badge>
-                </div>
-                <p className="text-xs text-lightgreen-600 line-clamp-2">
-                  プロジェクトの詳細説明がここに表示されます。参加者を募集中です。
-                </p>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-0 px-3 pb-3">
-                <div className="flex items-center gap-3 text-xs text-lightgreen-600">
-                  <div className="flex items-center">
-                    <ThumbsUp className="mr-1 h-3 w-3" />
-                    {project.likes}
-                  </div>
-                  <div className="flex items-center">
-                    <MessageSquare className="mr-1 h-3 w-3" />
-                    {project.comments}
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="mr-1 h-3 w-3" />
-                    {project.createdAt}
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full h-7 w-7 p-0 border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100 shadow-sm hover:shadow"
-                  >
-                    <ThumbsUp className="h-3 w-3" />
-                    <span className="sr-only">いいね</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full h-7 w-7 p-0 border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100 shadow-sm hover:shadow"
-                  >
-                    <ThumbsDown className="h-3 w-3" />
-                    <span className="sr-only">よくないね</span>
-                  </Button>
-                  <Button
-                    variant={project.isFavorite ? "default" : "outline"}
-                    size="sm"
-                    className={`rounded-full h-7 w-7 p-0 ${
-                      project.isFavorite
-                        ? "bg-lightgreen-500 text-white hover:bg-lightgreen-600 shadow-md"
-                        : "border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100"
-                    }`}
-                  >
-                    <Star
-                      className="h-3 w-3"
-                      fill={project.isFavorite ? "currentColor" : "none"}
-                    />
-                    <span className="sr-only">お気に入り</span>
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+              プロジェクトを探す
+            </Button>
+          </Link>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {projects.map((project) => (
+        <div
+          key={project.id}
+          className="rounded-xl border border-lightgreen-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => handleProjectClick(project)}
+        >
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-medium text-lightgreen-800">
+                {project.title}
+              </h3>
+              <p className="text-xs text-lightgreen-600 mt-1">
+                {project.description.length > 100
+                  ? `${project.description.substring(0, 100)}...`
+                  : project.description}
+              </p>
+            </div>
+            <div className="text-lightgreen-500">
+              <ChevronRight className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-2 flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="h-5 w-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center mr-1">
+                {project.owner.charAt(0)}
+              </div>
+              <span className="text-xs text-lightgreen-600">
+                {project.owner}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="bg-lightgreen-100 text-lightgreen-700 px-2 py-0.5 rounded-full text-xs">
+                {project.category}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <Link href={`/projects/${type}`} className="mt-1">
+        <Button
+          variant="ghost"
+          className="w-full text-lightgreen-700 hover:bg-lightgreen-100"
+        >
+          {type === "new" ? "新着プロジェクト" : "お気に入り"}をもっと見る
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </Link>
     </div>
   );
 }

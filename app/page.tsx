@@ -35,25 +35,71 @@ export default function HomePage() {
     // 保存されたプロジェクト情報を復元（必要に応じて）
     const savedProjectId = localStorage.getItem("selectedProjectId");
     if (savedProjectId) {
-      // 注: 実際の実装では、このIDを使ってプロジェクト詳細をAPIから取得する
-      // ここではダミーデータを使用しているので完全な復元は行わない
+      try {
+        const projectId = parseInt(savedProjectId);
+        const projectTitle = localStorage.getItem("selectedProjectTitle") || "";
+        const projectDescription =
+          localStorage.getItem("selectedProjectDescription") || "";
+        const projectOwner =
+          localStorage.getItem("selectedProjectOwner") || "オーナー情報なし";
+        // 注: 実際の実装では、このIDを使ってプロジェクト詳細をAPIから取得する
+        // ここではダミーデータを使用しているので完全な復元は行わない
+
+        // 保存されていた情報からプロジェクトオブジェクトを再構築
+        setSelectedProject({
+          id: projectId,
+          title: projectTitle,
+          description: projectDescription,
+          owner: projectOwner,
+          // その他必要なフィールドにはデフォルト値を設定
+          status: "active",
+          category: "その他",
+          createdAt: new Date().toISOString(),
+        });
+
+        console.log("Restored project from localStorage:", {
+          id: projectId,
+          title: projectTitle,
+          description: projectDescription,
+        });
+      } catch (error) {
+        console.error("Failed to restore project from localStorage:", error);
+      }
     }
   }, [router]);
 
   // プロジェクト選択時の処理
   const handleProjectSelect = (project: Project) => {
+    console.log("Project selected:", project);
+
     setSelectedProject(project);
 
     // ローカルストレージに保存
-    localStorage.setItem("selectedProjectId", project.id.toString());
-    localStorage.setItem("selectedProjectTitle", project.title);
-    localStorage.setItem("selectedProjectDescription", project.description);
+    try {
+      localStorage.setItem("selectedProjectId", project.id.toString());
+      localStorage.setItem("selectedProjectTitle", project.title);
+      localStorage.setItem("selectedProjectDescription", project.description);
+      localStorage.setItem("selectedProjectOwner", project.owner);
 
-    // 選択通知
-    toast({
-      title: "プロジェクト選択",
-      description: `「${project.title}」を選択しました`,
-    });
+      console.log("Project saved to localStorage", {
+        id: project.id.toString(),
+        title: project.title,
+        description: project.description,
+      });
+
+      // 選択通知
+      toast({
+        title: "プロジェクト選択",
+        description: `「${project.title}」を選択しました`,
+      });
+    } catch (error) {
+      console.error("Failed to save project to localStorage:", error);
+      toast({
+        title: "エラー",
+        description: "プロジェクト情報の保存に失敗しました",
+        variant: "destructive",
+      });
+    }
   };
 
   // お困りごとリストへの遷移時の処理
@@ -72,12 +118,42 @@ export default function HomePage() {
     const userId = localStorage.getItem("userId") || "";
     const userName = localStorage.getItem("userName") || "";
 
-    // ユーザー情報をローカルストレージに保存
-    localStorage.setItem("currentUserId", userId);
-    localStorage.setItem("currentUserName", userName);
+    // プロジェクト情報が確実に保存されていることを確認
+    try {
+      if (!localStorage.getItem("selectedProjectId")) {
+        // 再保存（冗長だが確実に）
+        localStorage.setItem(
+          "selectedProjectId",
+          selectedProject.id.toString()
+        );
+        localStorage.setItem("selectedProjectTitle", selectedProject.title);
+        localStorage.setItem(
+          "selectedProjectDescription",
+          selectedProject.description
+        );
+      }
 
-    // お困りごとリスト画面に遷移
-    router.push("/troubles");
+      // ユーザー情報をローカルストレージに保存
+      localStorage.setItem("currentUserId", userId);
+      localStorage.setItem("currentUserName", userName);
+
+      console.log("Before navigation - localStorage state:", {
+        projectId: localStorage.getItem("selectedProjectId"),
+        projectTitle: localStorage.getItem("selectedProjectTitle"),
+        projectDescription: localStorage.getItem("selectedProjectDescription"),
+        userId: localStorage.getItem("currentUserId"),
+      });
+
+      // お困りごとリスト画面に遷移
+      router.push("/troubles");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast({
+        title: "エラー",
+        description: "画面遷移中にエラーが発生しました",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -154,14 +230,14 @@ export default function HomePage() {
               新規
             </Button>
           </div>
-          <ProjectList type="new" />
+          <ProjectList type="new" onSelectProject={handleProjectSelect} />
         </div>
 
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-3 text-lightgreen-800">
             お気に入りプロジェクト
           </h2>
-          <ProjectList type="favorite" />
+          <ProjectList type="favorite" onSelectProject={handleProjectSelect} />
         </div>
 
         <div className="space-y-6">

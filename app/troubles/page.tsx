@@ -9,6 +9,17 @@ import { ChevronLeft, Bell } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { useToast } from "@/hooks/use-toast";
 
+interface ProjectInfo {
+  id: string;
+  title: string;
+  description: string;
+}
+
+interface UserInfo {
+  id: string;
+  name: string;
+}
+
 export default function TroublesPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -24,44 +35,73 @@ export default function TroublesPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // ローカルストレージからプロジェクト情報とユーザー情報を取得
-    const projectId = localStorage.getItem("selectedProjectId");
-    const projectTitle = localStorage.getItem("selectedProjectTitle");
-    const projectDescription = localStorage.getItem(
-      "selectedProjectDescription"
-    );
-    const userId =
-      localStorage.getItem("currentUserId") || localStorage.getItem("userId");
-    const userName =
-      localStorage.getItem("currentUserName") ||
-      localStorage.getItem("userName");
+    // クライアントサイドでのみ実行
+    if (typeof window !== "undefined") {
+      try {
+        // ローカルストレージからプロジェクト情報とユーザー情報を取得
+        const projectId = localStorage.getItem("selectedProjectId");
+        const projectTitle = localStorage.getItem("selectedProjectTitle");
+        const projectDescription = localStorage.getItem(
+          "selectedProjectDescription"
+        );
 
-    // プロジェクトが選択されていない場合はホーム画面にリダイレクト
-    if (!projectId || !projectTitle) {
-      toast({
-        title: "プロジェクトが選択されていません",
-        description: "ホーム画面からプロジェクトを選択してください",
-        variant: "destructive",
-      });
-      router.push("/");
-      return;
+        // デバッグ用ログ
+        console.log("Troubles page - localStorage values:", {
+          projectId,
+          projectTitle,
+          projectDescription,
+        });
+
+        // モックデータで対応（実際のアプリではこの部分は削除）
+        if (!projectId || !projectTitle) {
+          console.log("No project selected - using mock data");
+          // プロジェクトが選択されていない場合はモックデータをセット
+          setProjectInfo({
+            id: "1",
+            title: "オンライン学習プラットフォーム",
+            description:
+              "誰でも簡単にオンラインで学べるプラットフォームを開発しています。特に教育格差の解消を目指しています。",
+          });
+        } else {
+          // 取得した情報をステートに設定
+          setProjectInfo({
+            id: projectId,
+            title: projectTitle,
+            description: projectDescription || "詳細情報がありません",
+          });
+        }
+
+        // ユーザー情報の取得
+        const userId =
+          localStorage.getItem("currentUserId") ||
+          localStorage.getItem("userId");
+        const userName =
+          localStorage.getItem("currentUserName") ||
+          localStorage.getItem("userName");
+
+        if (userId && userName) {
+          setUserInfo({
+            id: userId,
+            name: userName,
+          });
+        } else {
+          // ダミーデータ（実際のアプリでは削除）
+          setUserInfo({
+            id: "1",
+            name: "キツネ",
+          });
+        }
+      } catch (error) {
+        console.error("Error retrieving data from localStorage:", error);
+        toast({
+          title: "データ取得エラー",
+          description: "情報の取得に失敗しました。もう一度お試しください。",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
-
-    // 取得した情報をステートに設定
-    setProjectInfo({
-      id: projectId,
-      title: projectTitle,
-      description: projectDescription || "詳細情報がありません",
-    });
-
-    if (userId && userName) {
-      setUserInfo({
-        id: userId,
-        name: userName,
-      });
-    }
-
-    setIsLoading(false);
   }, [router, toast]);
 
   if (isLoading) {
