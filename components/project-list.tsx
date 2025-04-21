@@ -59,10 +59,18 @@ export function ProjectList({ type, onSelectProject }: ProjectListProps) {
 
       console.log("API認証トークン形式:", token.substring(0, 15) + "...");
 
-      // APIエンドポイントの構築
-      let endpoint = "http://localhost:8000/api/v1/projects";
+      //  // APIエンドポイントの構築
+      //  let endpoint = "http://localhost:8000/api/v1/projects";
+      //  if (type === "favorite") {
+      //    endpoint = "http://localhost:8000/api/v1/projects/favorites";
+      //  }
+
+      // APIエンドポイントの構築 (バックエンドのルーティング構造に合わせる)
+      let endpoint = "http://localhost:8000/api/v1/projects/reecent";
       if (type === "favorite") {
-        endpoint = "http://localhost:8000/api/v1/projects/favorites";
+        endpoint = "http://localhost:8000/api/v1/projects/favorites?limit=5";
+      } else {
+        endpoint = "http://localhost:8000/api/v1/projects/recent?limit=5";
       }
 
       console.log(`APIリクエスト: ${endpoint}`);
@@ -74,6 +82,8 @@ export function ProjectList({ type, onSelectProject }: ProjectListProps) {
           "Content-Type": "application/json",
           Authorization: token,
         },
+        // クレデンシャルを含める
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -101,13 +111,17 @@ export function ProjectList({ type, onSelectProject }: ProjectListProps) {
       const data = await response.json();
       console.log(`${type} projects data:`, data);
 
-      // データが配列でない場合の処理
+      // データ構造に応じた処理を追加
       const projectsArray = Array.isArray(data)
         ? data
-        : data.results && Array.isArray(data.results)
-        ? data.results
-        : data.projects && Array.isArray(data.projects)
-        ? data.projects
+        : data.new_projects &&
+          Array.isArray(data.new_projects) &&
+          type === "new"
+        ? data.new_projects
+        : data.favorite_projects &&
+          Array.isArray(data.favorite_projects) &&
+          type === "favorite"
+        ? data.favorite_projects
         : [];
 
       // データの変換・整形
