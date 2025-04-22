@@ -4,96 +4,169 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Bell, MessageSquare, Trophy, TagIcon } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  PlusCircle,
+  Bell,
+  MessageSquare,
+  ChevronRight,
+  Star,
+  Users,
+  CalendarDays,
+  Heart, // Heartアイコンを追加
+} from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
-import { ProjectList, Project } from "@/components/project-list"; // 修正：実装したProjectListをインポート
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-// ランキングに基づいた色を取得する関数
-function getRankColor(rank: number) {
-  const colors: Record<number, string> = {
-    1: "bg-yellow-500",
-    2: "bg-gray-400",
-    3: "bg-amber-600",
-  };
-
-  return colors[rank] || "bg-lightgreen-500";
+// プロジェクト型定義
+interface Project {
+  id: number;
+  project_id: number;
+  title: string;
+  description: string;
+  owner: string;
+  creator_name: string;
+  status: string;
+  category: string;
+  createdAt: string;
+  created_at: string;
+  isFavorite: boolean;
+  is_favorite: boolean;
 }
 
 export default function HomePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // 修正：ローディング状態の追加
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [likedProjects, setLikedProjects] = useState<Project[]>([]);
 
-  // ログイン状態をチェックして未ログインの場合にログインページに遷移
+  // 過去24時間のプロジェクト取得
   useEffect(() => {
-    // 修正：認証チェックとプロジェクト情報の復元処理を追加
-    const checkAuthAndRestore = async () => {
+    const fetchRecentProjects = async () => {
       setIsLoading(true);
+      setError(null);
 
       try {
-        const isLoggedIn =
-          localStorage.getItem("isLoggedIn") === "true" ||
-          localStorage.getItem("token") !== null;
+        // 過去24時間のプロジェクト取得
 
-        if (!isLoggedIn) {
-          console.log("未ログイン状態を検出。ログインページへリダイレクト");
-          router.push("/login"); // ログインしていない場合はログインページにリダイレクト
-          return;
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("認証情報がありません。ログインしてください。");
         }
 
-        // 保存されたプロジェクト情報を復元
-        const savedProjectId = localStorage.getItem("selectedProjectId");
-        if (savedProjectId) {
-          try {
-            const projectId = parseInt(savedProjectId);
-            const projectTitle =
-              localStorage.getItem("selectedProjectTitle") || "";
-            const projectDescription =
-              localStorage.getItem("selectedProjectDescription") || "";
-            const projectOwner =
-              localStorage.getItem("selectedProjectOwner") ||
-              "オーナー情報なし";
-
-            // 保存されていた情報からプロジェクトオブジェクトを再構築
-            setSelectedProject({
-              id: projectId,
-              title: projectTitle,
-              description: projectDescription,
-              owner: projectOwner,
-              // その他必要なフィールドにはデフォルト値を設定
-              status: "active",
-              category: "その他",
-              createdAt: new Date().toISOString(),
-            });
-
-            console.log("Restored project from localStorage:", {
-              id: projectId,
-              title: projectTitle,
-              description: projectDescription,
-            });
-          } catch (error) {
-            console.error(
-              "Failed to restore project from localStorage:",
-              error
-            );
+        const response = await fetch(
+          //  `http://localhost:8000/api/v1/projects/recent`,
+          `/api/v1/projects/recent`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
+        );
+
+        if (!response.ok) {
+          // エラーレスポンスの詳細情報を取得
+          const errorText = await response.text();
+          console.error("エラーレスポンス:", errorText);
+
+          try {
+            const errorJson = JSON.parse(errorText);
+            console.error("エラー詳細:", errorJson);
+          } catch (e) {
+            // JSONとして解析できない場合はスキップ
+          }
+
+          throw new Error(`APIエラー: ${response.status}`);
         }
-      } catch (error) {
-        console.error("認証チェックエラー:", error);
+
+        const data = await response.json();
+        console.log("取得した過去24時間のプロジェクト:", data);
+
+        if (!Array.isArray(data)) {
+          throw new Error("予期しないレスポンス形式: 配列が期待されていました");
+        }
+
+        // 修正: データ整形用の関数を追加し型変換を強化
+        const formatProject = (item) => {
+          // 修正: project_id が文字列の場合に整数変換を追加
+          const projectId =
+            typeof item.project_id === "string"
+              ? parseInt(item.project_id, 10)
+              : item.project_id;
+
+          return {
+            id: projectId, // 数値を保証
+            project_id: projectId, // 数値を保証
+            title: item.title || "",
+            description: item.description || "",
+            owner: item.creator_name || "",
+            creator_name: item.creator_name || "",
+            status: "active",
+            category: item.category?.name || "その他",
+            createdAt: item.created_at || new Date().toISOString(),
+            created_at: item.created_at || new Date().toISOString(),
+            isFavorite: Boolean(item.is_favorite),
+            is_favorite: Boolean(item.is_favorite),
+          };
+        };
+
+        // 新着プロジェクトの処理
+        const recentProjects = data.map(formatProject);
+        setProjects(recentProjects);
+
+        // 修正: いいねプロジェクト取得のエラーハンドリングを強化
+        try {
+          const favoritesResponse = await fetch(`/api/v1/projects/favorites`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (favoritesResponse.ok) {
+            const favoritesData = await favoritesResponse.json();
+            console.log("取得したいいねプロジェクト:", favoritesData);
+
+            if (Array.isArray(favoritesData)) {
+              const formattedLikedProjects = favoritesData.map(formatProject);
+              setLikedProjects(formattedLikedProjects);
+            } else {
+              console.warn(
+                "いいねプロジェクトのレスポンス形式が予期しない形式です"
+              );
+              setLikedProjects([]);
+            }
+          } else {
+            const errorText = await favoritesResponse.text();
+            console.error("いいねプロジェクトエラー:", errorText);
+            setLikedProjects([]);
+          }
+        } catch (favError) {
+          console.error("いいねプロジェクト取得エラー:", favError);
+          setLikedProjects([]);
+          // メイン処理は継続するため、ここではエラーをスローしない
+        }
+      } catch (err) {
+        console.error("プロジェクト取得エラー:", err);
+        setError(
+          err instanceof Error ? err.message : "データの取得に失敗しました"
+        );
+        setProjects([]);
+        setLikedProjects([]); // 追加: エラー時は空配列をセット
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkAuthAndRestore();
-  }, [router]);
+    fetchRecentProjects();
+  }, []);
 
   // プロジェクト選択時の処理
   const handleProjectSelect = (project: Project) => {
     console.log("Project selected:", project);
-
     setSelectedProject(project);
 
     // ローカルストレージに保存
@@ -103,82 +176,17 @@ export default function HomePage() {
       localStorage.setItem("selectedProjectDescription", project.description);
       localStorage.setItem("selectedProjectOwner", project.owner);
 
-      console.log("Project saved to localStorage", {
-        id: project.id.toString(),
-        title: project.title,
-        description: project.description,
-      });
-
       // 選択通知
       toast({
         title: "プロジェクト選択",
         description: `「${project.title}」を選択しました`,
       });
     } catch (error) {
-      console.error("Failed to save project to localStorage:", error);
-      toast({
-        title: "エラー",
-        description: "プロジェクト情報の保存に失敗しました",
-        variant: "destructive",
-      });
+      console.error("プロジェクト情報の保存エラー:", error);
     }
   };
 
-  // お困りごとリストへの遷移時の処理
-  const handleTroublesClick = () => {
-    // プロジェクトが選択されていなければアラート表示
-    if (!selectedProject) {
-      toast({
-        title: "選択が必要です",
-        description: "プロジェクトを選択してください",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // 現在のユーザー情報を取得
-    const userId = localStorage.getItem("userId") || "";
-    const userName = localStorage.getItem("userName") || "";
-
-    // プロジェクト情報が確実に保存されていることを確認
-    try {
-      if (!localStorage.getItem("selectedProjectId")) {
-        // 再保存（冗長だが確実に）
-        localStorage.setItem(
-          "selectedProjectId",
-          selectedProject.id.toString()
-        );
-        localStorage.setItem("selectedProjectTitle", selectedProject.title);
-        localStorage.setItem(
-          "selectedProjectDescription",
-          selectedProject.description
-        );
-      }
-
-      // ユーザー情報をローカルストレージに保存
-      localStorage.setItem("currentUserId", userId);
-      localStorage.setItem("currentUserName", userName);
-
-      console.log("Before navigation - localStorage state:", {
-        projectId: localStorage.getItem("selectedProjectId"),
-        projectTitle: localStorage.getItem("selectedProjectTitle"),
-        projectDescription: localStorage.getItem("selectedProjectDescription"),
-        userId: localStorage.getItem("currentUserId"),
-      });
-
-      // お困りごとリスト画面に遷移
-      router.push("/troubles");
-    } catch (error) {
-      console.error("Navigation error:", error);
-      toast({
-        title: "エラー",
-        description: "画面遷移中にエラーが発生しました",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // 修正：ロード中表示を追加
+  // ロード中の表示
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gradient-to-b from-lightgreen-50 to-white">
@@ -187,12 +195,110 @@ export default function HomePage() {
     );
   }
 
+  // プロジェクトカード表示コンポーネント
+  const ProjectsList = ({
+    title,
+    projects,
+    icon,
+  }: {
+    title: string;
+    projects: Project[];
+    icon?: React.ReactNode;
+  }) => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-lightgreen-800 flex items-center">
+          {icon && <span className="mr-2">{icon}</span>}
+          {title}
+        </h2>
+        {title === "過去24時間の新着プロジェクト" && (
+          <Link href="/projects/create">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-lightgreen-300 text-lightgreen-700 hover:bg-lightgreen-100"
+            >
+              <PlusCircle className="mr-1 h-4 w-4" />
+              新規
+            </Button>
+          </Link>
+        )}
+      </div>
+
+      {projects.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          {projects.map((project) => (
+            <Card
+              key={project.id}
+              className={cn(
+                "overflow-hidden hover:shadow-md transition-all cursor-pointer border-lightgreen-200",
+                project.isFavorite && "bg-lightgreen-50/50"
+              )}
+              onClick={() => handleProjectSelect(project)}
+            >
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-medium text-lightgreen-800">
+                    {project.title}
+                  </h3>
+                  <button className="text-lightgreen-400 hover:text-yellow-500 transition-colors">
+                    <Star
+                      className={cn(
+                        "h-5 w-5",
+                        project.isFavorite && "fill-yellow-400 text-yellow-400"
+                      )}
+                    />
+                  </button>
+                </div>
+                <p className="text-xs text-lightgreen-600 mb-3 line-clamp-2">
+                  {project.description}
+                </p>
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center text-lightgreen-600">
+                      <Users className="h-3.5 w-3.5 mr-1" />
+                      {project.owner}
+                    </span>
+                    <span className="flex items-center text-lightgreen-600">
+                      <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                      {new Date(project.createdAt).toLocaleDateString("ja-JP")}
+                    </span>
+                  </div>
+                  <span className="flex items-center text-lightgreen-500 hover:text-lightgreen-600">
+                    詳細を見る
+                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="p-6 text-center border border-dashed border-lightgreen-300 rounded-xl bg-lightgreen-50">
+          <p className="text-lightgreen-700 mb-2">
+            {title === "過去24時間の新着プロジェクト"
+              ? "過去24時間に作成されたプロジェクトはありません"
+              : "いいねしたプロジェクトはありません"}
+          </p>
+          <Link href="/projects/create">
+            <Button
+              size="sm"
+              className="bg-lightgreen-500 hover:bg-lightgreen-600"
+            >
+              プロジェクトを作成
+            </Button>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="pb-20 bg-gradient-to-b from-lightgreen-50 to-white">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-lightgreen-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-lightgreen-800">
-            共創プラットフォーム
+            共創プラットフォーム（テスト版）
           </h1>
           <div className="flex items-center gap-2">
             <Button
@@ -237,7 +343,7 @@ export default function HomePage() {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs border-lightgreen-300 text-lightgreen-700 hover:bg-lightgreen-100"
-                  onClick={handleTroublesClick}
+                  onClick={() => router.push("/troubles")}
                 >
                   <MessageSquare className="mr-1 h-3 w-3" />
                   お困りごとを見る
@@ -247,33 +353,34 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-lightgreen-800">
-              新着プロジェクト
-            </h2>
-            <Link href="/projects/create">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 border-lightgreen-300 text-lightgreen-700 hover:bg-lightgreen-100"
-              >
-                <PlusCircle className="mr-1 h-4 w-4" />
-                新規
-              </Button>
-            </Link>
-          </div>
-          {/* 修正：ProjectListコンポーネントによるバックエンドデータ取得 */}
-          <ProjectList type="new" onSelectProject={handleProjectSelect} />
-        </div>
+        {/* 新着プロジェクト一覧表示 */}
+        <ProjectsList
+          title="過去24時間の新着プロジェクト"
+          projects={projects}
+        />
 
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-3 text-lightgreen-800">
-            お気に入りプロジェクト
-          </h2>
-          {/* 修正：ProjectListコンポーネントによるバックエンドデータ取得 */}
-          <ProjectList type="favorite" onSelectProject={handleProjectSelect} />
-        </div>
+        {/* いいねしたプロジェクト一覧表示 */}
+        <ProjectsList
+          title="いいねしたプロジェクト"
+          projects={likedProjects}
+          icon={<Heart className="h-5 w-5 text-red-500" />}
+        />
+
+        {/* エラー表示 */}
+        {error && (
+          <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-600 mt-4">
+            <p className="font-medium">エラーが発生しました</p>
+            <p className="text-sm">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 text-red-600 border-red-300 hover:bg-red-50"
+              onClick={() => window.location.reload()}
+            >
+              再読み込み
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-6">
           <Link href="/troubles">
@@ -282,82 +389,6 @@ export default function HomePage() {
               お困りごとリスト
             </Button>
           </Link>
-
-          <div className="rounded-2xl border border-lightgreen-200 bg-white p-4 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-lightgreen-800 flex items-center">
-                <div className="bg-lightgreen-100 p-1.5 rounded-full mr-2">
-                  <Trophy className="h-4 w-4 text-lightgreen-600" />
-                </div>
-                アクティビティランキング
-              </h3>
-              <span className="text-xs text-lightgreen-600 bg-lightgreen-50 px-2 py-1 rounded-full">
-                今週
-              </span>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: "キツネ", points: 1250, rank: 1 },
-                { name: "パンダ", points: 980, rank: 2 },
-                { name: "ウサギ", points: 875, rank: 3 },
-              ].map((user) => (
-                <div
-                  key={user.name}
-                  className="flex items-center justify-between bg-gradient-to-r from-lightgreen-50 to-transparent p-2 rounded-lg hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-center">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-white font-medium mr-2 text-xs ${getRankColor(
-                        user.rank
-                      )}`}
-                    >
-                      {user.rank}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{user.name}</span>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div
-                          className="bg-lightgreen-500 h-1.5 rounded-full"
-                          style={{ width: `${(user.points / 1250) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="font-medium text-sm text-lightgreen-700">
-                    {user.points}pt
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-lightgreen-200 bg-white p-4 shadow-sm">
-            <h3 className="font-medium mb-3 text-lightgreen-800 flex items-center">
-              <div className="bg-lightgreen-100 p-1.5 rounded-full mr-2">
-                <TagIcon className="h-4 w-4 text-lightgreen-600" />
-              </div>
-              カテゴリー
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {[
-                "テクノロジー",
-                "デザイン",
-                "マーケティング",
-                "ビジネス",
-                "教育",
-              ].map((category) => (
-                <Button
-                  key={category}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs h-8 border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100 shadow-sm hover:shadow"
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
-            <div className="mb-6"></div>
-          </div>
         </div>
       </main>
 

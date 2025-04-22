@@ -53,7 +53,7 @@ export function ProjectList({ type, onSelectProject }: ProjectListProps) {
       }
 
       // トークンに「Bearer」プレフィックスを追加（存在しない場合のみ）
-      if (!token.startsWith("Bearer ")) {
+      if (token && !token.startsWith("Bearer ")) {
         token = `Bearer ${token}`;
       }
 
@@ -66,11 +66,12 @@ export function ProjectList({ type, onSelectProject }: ProjectListProps) {
       //  }
 
       // APIエンドポイントの構築 (バックエンドのルーティング構造に合わせる)
-      let endpoint = "http://localhost:8000/api/v1/projects/reecent";
+      let endpoint = "http://localhost:8000/api/v1/projects/recent";
       if (type === "favorite") {
         endpoint = "http://localhost:8000/api/v1/projects/favorites?limit=5";
       } else {
-        endpoint = "http://localhost:8000/api/v1/projects/recent?limit=5";
+        endpoint =
+          "http://localhost:8000/api/v1/projects/recent?limit=5&hours=24";
       }
 
       console.log(`APIリクエスト: ${endpoint}`);
