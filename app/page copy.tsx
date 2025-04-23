@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,15 +6,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  PlusCircle,
   Bell,
   MessageSquare,
   ChevronRight,
   Star,
-  ThumbsUp,
-  MessageCircle,
+  Users,
+  CalendarDays,
   Heart,
+  Trophy,
+  TagIcon,
   Check,
   Clock,
+  ThumbsUp,
+  MessageCircle,
 } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { cn } from "@/lib/utils";
@@ -118,7 +122,10 @@ function getCategoryStyle(category: string) {
         </div>
       ),
     },
-    その他: {
+  };
+
+  return (
+    styles[category] || {
       bgColor: "bg-gray-100",
       textColor: "text-gray-700",
       icon: (
@@ -126,10 +133,8 @@ function getCategoryStyle(category: string) {
           他
         </div>
       ),
-    },
-  };
-
-  return styles[category] || styles["その他"];
+    }
+  );
 }
 
 // 時間を「◯時間前」の形式で表示する関数
@@ -187,8 +192,6 @@ export default function HomePage() {
               localStorage.getItem("selectedProjectDescription") || "";
             const projectOwner =
               localStorage.getItem("selectedProjectOwner") || "不明";
-            const projectCategory =
-              localStorage.getItem("selectedProjectCategory") || "その他";
 
             setSelectedProject({
               id: projectId,
@@ -196,7 +199,7 @@ export default function HomePage() {
               description: projectDescription,
               owner: projectOwner,
               status: "active",
-              category: projectCategory,
+              category: "その他",
               createdAt: new Date().toISOString(),
               isFavorite: false,
             });
@@ -206,8 +209,6 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error("認証チェックエラー:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -480,7 +481,6 @@ export default function HomePage() {
       localStorage.setItem("selectedProjectTitle", project.title);
       localStorage.setItem("selectedProjectDescription", project.description);
       localStorage.setItem("selectedProjectOwner", project.owner);
-      localStorage.setItem("selectedProjectCategory", project.category);
 
       toast({
         title: "プロジェクト選択",
@@ -596,10 +596,6 @@ export default function HomePage() {
         localStorage.setItem(
           "selectedProjectDescription",
           selectedProject.description
-        );
-        localStorage.setItem(
-          "selectedProjectCategory",
-          selectedProject.category
         );
       }
 
@@ -745,28 +741,15 @@ export default function HomePage() {
             <span className="text-sm text-lightgreen-800 font-semibold mr-2">
               選択中のプロジェクト:
             </span>
-            <div
-              className={cn(
-                "h-2 w-2 rounded-full mr-2",
-                getCategoryStyle(selectedProject.category).bgColor
-              )}
-            ></div>
-            <div className="flex items-center flex-1 min-w-0">
+            {/* カテゴリーカラーを左側に配置 */}
+            {getCategoryStyle(selectedProject.category).icon}
+            <div className="flex items-center flex-1 min-w-0 ml-2">
               <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs mr-2">
                 {selectedProject.owner.charAt(0)}
               </div>
               <h3 className="text-sm font-medium text-lightgreen-800 truncate">
                 {selectedProject.title}
               </h3>
-              <span
-                className={cn(
-                  "text-xs px-2 py-0.5 rounded-full ml-2 whitespace-nowrap",
-                  "bg-white border",
-                  getCategoryStyle(selectedProject.category).textColor
-                )}
-              >
-                {selectedProject.category}
-              </span>
             </div>
           </div>
         </div>
@@ -824,21 +807,6 @@ export default function HomePage() {
               <p className="text-sm text-lightgreen-600 mb-3">
                 興味のあるプロジェクトの★マークをクリックして、お気に入りに追加しましょう
               </p>
-            </div>
-          )}
-
-          {/* お気に入りプロジェクトの「もっと見る」リンク */}
-          {likedProjects.length > 0 && (
-            <div className="mt-4 text-center">
-              <Link href="/projects/favorite">
-                <Button
-                  variant="ghost"
-                  className="text-lightgreen-600 hover:text-lightgreen-700"
-                >
-                  お気に入りプロジェクトをもっと見る
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
             </div>
           )}
         </div>

@@ -1,17 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Bell } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProjectGrid } from "@/components/project-grid";
 
-interface ProjectsPageProps {
-  params: {
-    type: string;
-  };
-}
-
-export default async function ProjectsPage({ params }: ProjectsPageProps) {
-  const type = params.type;
+export default function ProjectsPage() {
+  const params = useParams();
+  const type = params.type as string;
   const title = type === "new" ? "新着プロジェクト" : "お気に入りプロジェクト";
 
   return (
@@ -43,7 +41,9 @@ export default async function ProjectsPage({ params }: ProjectsPageProps) {
               size="icon"
               className="rounded-full overflow-hidden border-2 border-lightgreen-200 p-0"
             >
-              <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">キ</div>
+              <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">
+                キ
+              </div>
             </Button>
           </div>
         </div>
