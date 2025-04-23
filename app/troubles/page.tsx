@@ -57,10 +57,10 @@ export default function TroublesPage() {
           console.log("No project selected - using mock data");
           // プロジェクトが選択されていない場合はモックデータをセット
           setProjectInfo({
-            id: "1",
-            title: "オンライン学習プラットフォーム",
+            id: "37",
+            title: "地域資源循環プロジェクト",
             description:
-              "誰でも簡単にオンラインで学べるプラットフォームを開発しています。特に教育格差の解消を目指しています。",
+              "地域の産業廃棄物を原料に再資源化するための化学技術の実証と連携体制の構築。",
           });
         } else {
           // 取得した情報をステートに設定
