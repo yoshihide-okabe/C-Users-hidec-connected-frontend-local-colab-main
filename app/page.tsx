@@ -158,6 +158,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [likedProjects, setLikedProjects] = useState<Project[]>([]);
+  // ここにユーザーアイコン用の状態変数を追加
+  const [userInitial, setUserInitial] = useState("ゲ"); // デフォルト値は「ゲ」(ゲスト)
 
   // ログイン状態をチェックして未ログインならログインページへリダイレクト
   useEffect(() => {
@@ -174,6 +176,12 @@ export default function HomePage() {
           console.log("未ログイン状態のため、ログインページへリダイレクト");
           router.push("/login");
           return;
+        }
+
+        // ユーザー名の頭文字を取得して設定 (追加)
+        const userName = localStorage.getItem("userName");
+        if (userName && userName.length > 0) {
+          setUserInitial(userName.charAt(0));
         }
 
         // ローカルストレージから選択済みプロジェクトを復元
@@ -730,7 +738,7 @@ export default function HomePage() {
               className="rounded-full overflow-hidden border-2 border-lightgreen-200 p-0"
             >
               <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">
-                キ
+                {userInitial}
               </div>
             </Button>
           </div>

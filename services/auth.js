@@ -147,7 +147,7 @@ export async function register({
     }
     // ここまで追加 -------
 
-    return await response.json();
+    return await data;
   } catch (error) {
     console.error("登録エラー:", error);
     throw error;

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "@/components/mobile-nav";
 import { register } from "@/services/auth"; // auth.jsをインポート
+import { useToast } from "@/hooks/use-toast"; // Toast機能をインポート
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { toast } = useToast(); // Toast機能を利用
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -45,16 +47,34 @@ export default function RegisterPage() {
           categories: selectedCategories,
         });
 
+        // アラートからトースト通知に変更
+        toast({
+          title: "成功",
+          description: "登録が完了しました！",
+          variant: "default",
+        });
         alert("登録が完了しました！");
         router.push("/");
       } catch (err: any) {
         console.error("Registration error:", err);
-        setError(err.message || "登録中にエラーが発生しました。");
+        // エラー状態変数を使わず、直接トースト通知を表示
+        toast({
+          title: "登録エラー",
+          description: err.message || "登録中にエラーが発生しました。",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     } else {
-      alert(isNewUser ? "登録が完了しました！" : "変更が完了しました！");
+      // アラートからトースト通知に変更
+      toast({
+        title: "成功",
+        description: isNewUser
+          ? "登録が完了しました！"
+          : "変更が完了しました！",
+        variant: "default",
+      });
       router.push("/");
       setIsLoading(false);
     }
@@ -132,13 +152,6 @@ export default function RegisterPage() {
               情報変更
             </Button>
           </div>
-
-          {/* エラー表示 */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

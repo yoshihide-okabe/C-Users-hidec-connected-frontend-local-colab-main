@@ -75,32 +75,32 @@ export function TroubleList({ projectId }: TroubleListProps) {
           const dummyTroubles: Trouble[] = [
             {
               id: 1,
-              title: "ユーザー登録フローの改善",
+              title: "ナノ粒子が素材内部で凝集",
               description:
-                "現在のユーザー登録フローが複雑で、ユーザーの離脱率が高いです。より簡単で直感的な登録フローにしたいと考えています。",
-              category: "UX/UI",
+                "ナノ粒子が素材内部で凝集してしまい、期待する性能が得られない。分散技術の見直しが必要。",
+              category: "技術問題",
               status: "未解決",
-              createdAt: "2024-04-10T12:00:00Z",
+              createdAt: "2025-04-23T12:00:00Z",
               commentCount: 5,
             },
             {
               id: 2,
-              title: "学習コンテンツの多言語対応",
+              title: "空気清浄効果を最大化する配置・形状設計",
               description:
-                "現在は日本語のみのコンテンツですが、英語、中国語、スペイン語への対応が必要です。翻訳リソースが不足しています。",
-              category: "コンテンツ",
-              status: "対応中",
-              createdAt: "2024-04-12T09:30:00Z",
+                "空気清浄効果を最大化する配置・形状設計のデータが不足しており、試作が進まない。",
+              category: "設計・企画",
+              status: "未解決",
+              createdAt: "2024-04-24T09:30:00Z",
               commentCount: 8,
             },
             {
               id: 3,
-              title: "モバイル版のパフォーマンス改善",
+              title: "屋内使用におけるナノ粒子の安全性",
               description:
-                "モバイルデバイスでの読み込み速度が遅く、特に通信環境が悪い場所ではアプリが使いづらいという声があります。",
+                "屋内使用におけるナノ粒子の安全性に関する規制対応が明確でなく、使用許可取得に時間がかかっている。",
               category: "技術",
-              status: "解決済み",
-              createdAt: "2024-04-05T14:20:00Z",
+              status: "未解決",
+              createdAt: "2024-04-24T14:20:00Z",
               commentCount: 12,
             },
           ];

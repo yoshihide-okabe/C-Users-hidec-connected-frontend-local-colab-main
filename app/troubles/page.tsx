@@ -57,10 +57,10 @@ export default function TroublesPage() {
           console.log("No project selected - using mock data");
           // プロジェクトが選択されていない場合はモックデータをセット
           setProjectInfo({
-            id: "37",
-            title: "地域資源循環プロジェクト",
+            id: "39",
+            title: "ナノ粒子を用いた空気浄化素材開発",
             description:
-              "地域の産業廃棄物を原料に再資源化するための化学技術の実証と連携体制の構築。",
+              "PM2.5やVOC（揮発性有機化合物）を吸着・分解する機能を持つナノ粒子を活用し、建材やフィルターへの応用を目指す共創プロジェクト。",
           });
         } else {
           // 取得した情報をステートに設定
@@ -160,7 +160,7 @@ export default function TroublesPage() {
             <div className="space-y-2">
               <div>
                 <h4 className="font-medium text-sm text-lightgreen-800">
-                  オンライン学習プラットフォーム
+                  ナノ粒子を用いた空気浄化素材開発
                 </h4>
                 <p className="text-xs text-lightgreen-600">フクロウ</p>
               </div>
@@ -169,7 +169,7 @@ export default function TroublesPage() {
                   プロジェクト概要
                 </h5>
                 <p className="text-xs text-lightgreen-600">
-                  誰でも簡単にオンラインで学べるプラットフォームを開発しています。特に教育格差の解消を目指しています。
+                  PM2.5やVOC（揮発性有機化合物）を吸着・分解する機能を持つナノ粒子を活用し、建材やフィルターへの応用を目指す共創プロジェクト。
                 </p>
               </div>
             </div>

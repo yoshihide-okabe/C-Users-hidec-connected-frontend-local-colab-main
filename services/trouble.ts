@@ -1,4 +1,4 @@
-import { Trouble } from "@/components/trouble-list";
+//import { Trouble } from "@/components/trouble-list";
 
 // APIのベースURL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -15,6 +15,17 @@ interface ApiTrouble {
   created_at: string;
   status: string;
   comments: number;
+}
+
+interface Trouble {
+  id: number;
+  description: string;
+  status: string;
+  categoryId: number;
+  projectId: number;
+  creatorName: string;
+  createdAt: string;
+  commentCount: number;
 }
 
 interface ApiTroubleList {
