@@ -91,7 +91,7 @@ function getCategoryStyle(category: string) {
         </div>
       ),
     },
-    農業: {
+    グローバル: {
       bgColor: "bg-lime-100",
       textColor: "text-lime-700",
       icon: (
