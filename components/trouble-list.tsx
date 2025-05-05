@@ -14,6 +14,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Send } from "lucide-react";
+import { getTroublesByProject } from "@/services/trouble";
+
+// <!-- 修正: ApiTroubleインターフェースを追加 -->
+// APIから取得するトラブルの型
+interface ApiTrouble {
+  id: number;
+  description: string;
+  status: string;
+  categoryId: number;
+  projectId: number;
+  creatorName: string;
+  createdAt: string;
+  commentCount: number;
+}
 
 interface Trouble {
   id: number;
@@ -23,10 +37,26 @@ interface Trouble {
   status: "解決済み" | "未解決" | "対応中";
   createdAt: string;
   commentCount: number;
+  // 追加: カテゴリーIDとカテゴリー名を保持
+  categoryId: number;
+  categoryName?: string;
 }
 
+// 修正: props型にonTroubleSelectを追加
 interface TroubleListProps {
   projectId?: string;
+  // 追加: 選択ハンドラーのプロパティ
+  onTroubleSelect?: (trouble: {
+    id: number;
+    description: string;
+    status: string;
+    categoryId: number;
+    categoryName?: string;
+    projectId: number;
+    creatorName: string;
+    createdAt: string;
+    commentCount: number;
+  }) => void;
 }
 
 // カテゴリに基づいた色を取得する関数
@@ -54,70 +84,80 @@ function getCategoryBadgeStyle(category: string) {
   );
 }
 
-export function TroubleList({ projectId }: TroubleListProps) {
+// <!-- 修正: カテゴリIDを名前に変換する関数を追加 -->
+// カテゴリIDを名前に変換する関数
+function getCategoryName(categoryId: number): string {
+  // カテゴリIDと名前のマッピング
+  const categoryMap: Record<number, string> = {
+    1: "技術問題",
+    2: "設計・企画",
+    3: "UI/UXデザイン",
+    4: "コンテンツ制作",
+    5: "モバイル開発",
+    // 他のカテゴリも追加
+  };
+
+  return categoryMap[categoryId] || "その他";
+}
+
+export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
   const [troubles, setTroubles] = useState<Trouble[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // <!-- 修正: エラー状態を追加 -->
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 通常はAPIからお困りごと一覧を取得するが、
-    // ここではダミーデータを使用する
     const fetchTroubles = async () => {
       try {
-        // APIコール（実装時にコメントアウトを解除）
-        // const response = await fetch(`/api/troubles?projectId=${projectId}`);
-        // const data = await response.json();
-        // setTroubles(data);
+        setIsLoading(true);
+        setError(null);
 
-        console.log("TroubleList - projectId:", projectId);
+        // ローカルストレージからプロジェクトIDを取得、またはpropsから受け取る
+        const selectedProjectId =
+          projectId || localStorage.getItem("selectedProjectId");
 
-        // ダミーデータ（実際の実装時は削除）
-        setTimeout(() => {
-          const dummyTroubles: Trouble[] = [
-            {
-              id: 1,
-              title: "ナノ粒子が素材内部で凝集",
-              description:
-                "ナノ粒子が素材内部で凝集してしまい、期待する性能が得られない。分散技術の見直しが必要。",
-              category: "技術問題",
-              status: "未解決",
-              createdAt: "2025-04-23T12:00:00Z",
-              commentCount: 5,
-            },
-            {
-              id: 2,
-              title: "空気清浄効果を最大化する配置・形状設計",
-              description:
-                "空気清浄効果を最大化する配置・形状設計のデータが不足しており、試作が進まない。",
-              category: "設計・企画",
-              status: "未解決",
-              createdAt: "2024-04-24T09:30:00Z",
-              commentCount: 8,
-            },
-            {
-              id: 3,
-              title: "屋内使用におけるナノ粒子の安全性",
-              description:
-                "屋内使用におけるナノ粒子の安全性に関する規制対応が明確でなく、使用許可取得に時間がかかっている。",
-              category: "技術",
-              status: "未解決",
-              createdAt: "2024-04-24T14:20:00Z",
-              commentCount: 12,
-            },
-          ];
-
-          // プロジェクトIDがある場合、そのIDに関連するお困りごとのみをフィルタリング
-          // 実際のアプリでは適切なAPI呼び出しに置き換える
-          if (projectId) {
-            // このサンプルではプロジェクトIDによるフィルタリングを模倣していない
-            setTroubles(dummyTroubles);
-          } else {
-            setTroubles(dummyTroubles);
-          }
-
+        if (!selectedProjectId) {
+          console.warn("プロジェクトIDが見つかりません");
           setIsLoading(false);
-        }, 500); // 読み込み時間をシミュレート
+          return;
+        }
+
+        console.log("TroubleList - プロジェクトID:", selectedProjectId);
+
+        // 既に実装済みのgetTroublesByProject関数を使用
+        const { troubles: fetchedTroubles } = await getTroublesByProject(
+          selectedProjectId
+        );
+
+        if (!fetchedTroubles || fetchedTroubles.length === 0) {
+          setTroubles([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 結果をUI用のTrouble型に変換
+        const formattedTroubles: Trouble[] = fetchedTroubles.map((trouble) => {
+          // カテゴリー名を先に定義
+          const categoryName = getCategoryName(trouble.categoryId);
+
+          return {
+            id: trouble.id,
+            title: trouble.description.split("\n")[0] || "無題のお困りごと",
+            description: trouble.description,
+            category: categoryName, // ここで定義済みの変数を使用
+            categoryId: trouble.categoryId,
+            categoryName, // ショートハンドプロパティ（ES6構文）
+            status: trouble.status === "解決" ? "解決済み" : "未解決",
+            createdAt: trouble.createdAt,
+            commentCount: trouble.commentCount,
+          };
+        });
+
+        setTroubles(formattedTroubles);
       } catch (error) {
-        console.error("Error fetching troubles:", error);
+        console.error("お困りごと取得エラー:", error);
+        setError("お困りごとの取得に失敗しました");
+      } finally {
         setIsLoading(false);
       }
     };
@@ -137,10 +177,50 @@ export function TroubleList({ projectId }: TroubleListProps) {
     }
   };
 
+  // 追加: お困りごとのクリックハンドラー
+  const handleTroubleClick = (event: React.MouseEvent, trouble: Trouble) => {
+    if (onTroubleSelect) {
+      // デフォルトのリンク遷移を防止
+      event.preventDefault();
+      // イベントの伝播も停止
+      event.stopPropagation();
+
+      // 親コンポーネントに選択されたお困りごとを通知
+      onTroubleSelect({
+        id: trouble.id,
+        description: trouble.description,
+        status: trouble.status === "解決済み" ? "解決" : "未解決",
+        categoryId: trouble.categoryId,
+        categoryName: trouble.categoryName,
+        projectId: parseInt(projectId || "0"),
+        creatorName: "ユーザー", // 実際の作成者名はAPIから取得する必要があります
+        createdAt: trouble.createdAt,
+        commentCount: trouble.commentCount,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full py-6 flex justify-center">
         <div className="text-lightgreen-600">読み込み中...</div>
+      </div>
+    );
+  }
+
+  // <!-- 修正: エラー表示を追加 -->
+  if (error) {
+    return (
+      <div className="w-full py-6 bg-red-50 rounded-xl border border-red-200 flex flex-col items-center justify-center">
+        <p className="text-red-700 mb-2">{error}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-red-300 text-red-700 hover:bg-red-100"
+          onClick={() => window.location.reload()}
+        >
+          再読み込み
+        </Button>
       </div>
     );
   }
@@ -165,7 +245,11 @@ export function TroubleList({ projectId }: TroubleListProps) {
   return (
     <div className="space-y-3">
       {troubles.map((trouble) => (
-        <Link href={`/troubles/${trouble.id}`} key={trouble.id}>
+        <div
+          key={trouble.id}
+          onClick={(e) => handleTroubleClick(e, trouble)}
+          className="cursor-pointer"
+        >
           <div className="rounded-xl border border-lightgreen-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start">
               <div className="flex-1">
@@ -204,7 +288,7 @@ export function TroubleList({ projectId }: TroubleListProps) {
               </div>
             </div>
           </div>
-        </Link>
+        </div>
       ))}
 
       <Link href="/troubles" className="mt-1">

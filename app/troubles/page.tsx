@@ -3,16 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { TroubleList } from "@/components/trouble-list";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Bell } from "lucide-react";
+import { ChevronLeft, Bell, Check } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { useToast } from "@/hooks/use-toast";
+// インポート名を変更して衝突を回避
+import { TroubleList as TroubleListComponent } from "@/components/trouble-list";
+import { cn } from "@/lib/utils"; // ← cn関数をインポート追加
 
 interface ProjectInfo {
   id: string;
   title: string;
   description: string;
+  owner: string; // <!-- 修正: ownerフィールドを追加 -->
+  category: string; // <!-- 修正: categoryフィールドを追加 -->
 }
 
 interface UserInfo {
@@ -20,56 +24,99 @@ interface UserInfo {
   name: string;
 }
 
+// 追加: お困りごと型定義
+interface Trouble {
+  id: number;
+  description: string;
+  status: string;
+  categoryId: number;
+  categoryName?: string; // カテゴリー名を追加
+  projectId: number;
+  creatorName: string;
+  createdAt: string;
+  commentCount: number;
+}
+
 export default function TroublesPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [projectInfo, setProjectInfo] = useState({
+  const [projectInfo, setProjectInfo] = useState<ProjectInfo>({
     id: "",
     title: "",
     description: "",
+    owner: "",
+    category: "",
   });
   const [userInfo, setUserInfo] = useState({
     id: "",
     name: "",
   });
   const [isLoading, setIsLoading] = useState(true);
+  // 追加: 選択中のお困りごと状態
+  const [selectedTrouble, setSelectedTrouble] = useState<Trouble | null>(null);
+
+  // 追加: お困りごとが選択されたときのハンドラー
+  const handleTroubleSelect = (trouble: Trouble) => {
+    setSelectedTrouble(trouble);
+
+    // ローカルストレージに選択されたお困りごとを保存
+    localStorage.setItem("selectedTroubleId", trouble.id.toString());
+    localStorage.setItem("selectedTroubleDescription", trouble.description);
+    localStorage.setItem("selectedTroubleStatus", trouble.status);
+    if (trouble.categoryName) {
+      localStorage.setItem("selectedTroubleCategory", trouble.categoryName);
+    }
+
+    toast({
+      title: "お困りごと選択",
+      description: `お困りごとを選択しました`,
+    });
+  };
 
   useEffect(() => {
     // クライアントサイドでのみ実行
     if (typeof window !== "undefined") {
       try {
-        // ローカルストレージからプロジェクト情報とユーザー情報を取得
+        // <!-- 修正: ローカルストレージからプロジェクト情報を正しく取得 -->
         const projectId = localStorage.getItem("selectedProjectId");
         const projectTitle = localStorage.getItem("selectedProjectTitle");
         const projectDescription = localStorage.getItem(
           "selectedProjectDescription"
         );
+        const projectOwner =
+          localStorage.getItem("selectedProjectOwner") || "不明";
+        const projectCategory =
+          localStorage.getItem("selectedProjectCategory") || "その他";
 
         // デバッグ用ログ
         console.log("Troubles page - localStorage values:", {
           projectId,
           projectTitle,
           projectDescription,
+          projectOwner, // <!-- 修正: ログにOwnerを追加 -->
+          projectCategory, // <!-- 修正: ログにカテゴリを追加 -->
         });
 
-        // モックデータで対応（実際のアプリではこの部分は削除）
+        // <!-- 修正: プロジェクト情報の検証とセット -->
         if (!projectId || !projectTitle) {
-          console.log("No project selected - using mock data");
-          // プロジェクトが選択されていない場合はモックデータをセット
-          setProjectInfo({
-            id: "39",
-            title: "ナノ粒子を用いた空気浄化素材開発",
-            description:
-              "PM2.5やVOC（揮発性有機化合物）を吸着・分解する機能を持つナノ粒子を活用し、建材やフィルターへの応用を目指す共創プロジェクト。",
+          console.log("No project selected");
+          toast({
+            title: "プロジェクトが選択されていません",
+            description: "先にプロジェクトを選択してください",
+            variant: "destructive",
           });
-        } else {
-          // 取得した情報をステートに設定
-          setProjectInfo({
-            id: projectId,
-            title: projectTitle,
-            description: projectDescription || "詳細情報がありません",
-          });
+          router.push("/"); // <!-- 修正: ホームページに戻る -->
+          return;
         }
+
+        // 取得した情報をステートに設定
+        setProjectInfo({
+          id: projectId,
+          title: projectTitle,
+          description: projectDescription || "詳細情報がありません",
+          owner: projectOwner, // <!-- 修正: Owner情報をセット -->
+          category: projectCategory, // <!-- 修正: カテゴリ情報をセット -->
+        });
 
         // ユーザー情報の取得
         const userId =
@@ -84,11 +131,28 @@ export default function TroublesPage() {
             id: userId,
             name: userName,
           });
-        } else {
-          // ダミーデータ（実際のアプリでは削除）
-          setUserInfo({
-            id: "1",
-            name: "キツネ",
+        }
+
+        // 追加: ローカルストレージから選択中のお困りごとを復元
+        const troubleId = localStorage.getItem("selectedTroubleId");
+        if (troubleId) {
+          const description =
+            localStorage.getItem("selectedTroubleDescription") || "";
+          const status =
+            localStorage.getItem("selectedTroubleStatus") || "未解決";
+          const categoryName =
+            localStorage.getItem("selectedTroubleCategory") || "その他";
+
+          setSelectedTrouble({
+            id: parseInt(troubleId),
+            description,
+            status,
+            categoryId: 1, // ダミー値
+            categoryName,
+            projectId: parseInt(projectId || "0"),
+            creatorName: userName || "不明",
+            createdAt: new Date().toISOString(),
+            commentCount: 0,
           });
         }
       } catch (error) {
@@ -103,6 +167,19 @@ export default function TroublesPage() {
       }
     }
   }, [router, toast]);
+
+  // 追加: お困りごとのステータスに応じた色を取得する関数
+  const getTroubleStatusColor = (status: string) => {
+    switch (status) {
+      case "解決":
+        return "bg-green-100 text-green-700";
+      case "対応中":
+        return "bg-blue-100 text-blue-700";
+      case "未解決":
+      default:
+        return "bg-yellow-100 text-yellow-700";
+    }
+  };
 
   if (isLoading) {
     return (
@@ -144,12 +221,43 @@ export default function TroublesPage() {
               className="rounded-full overflow-hidden border-2 border-lightgreen-200 p-0"
             >
               <div className="h-8 w-8 bg-orange-500 text-white font-semibold flex items-center justify-center">
-                キ
+                {userInfo.name.charAt(0) || "ユ"}{" "}
+                {/* <!-- 修正: ユーザー名の頭文字を表示 --> */}
               </div>
             </Button>
           </div>
         </div>
       </header>
+
+      {/* 追加: 選択中のお困りごと表示 */}
+      {selectedTrouble && (
+        <div className="sticky top-[57px] z-10 bg-lightgreen-50/95 backdrop-blur-sm border-b border-lightgreen-200 px-4 py-2 shadow-sm">
+          <div className="flex items-center">
+            <Check className="h-5 w-5 text-lightgreen-700 mr-2" />
+            <span className="text-sm text-lightgreen-800 font-semibold mr-2">
+              選択中のお困りごと:
+            </span>
+            <div className="flex items-center flex-1 min-w-0">
+              <span
+                className={cn(
+                  "text-xs px-2 py-0.5 rounded-full mr-2 whitespace-nowrap",
+                  getTroubleStatusColor(selectedTrouble.status)
+                )}
+              >
+                {selectedTrouble.status}
+              </span>
+              <h3 className="text-sm font-medium text-lightgreen-800 truncate">
+                {selectedTrouble.description}
+              </h3>
+              {selectedTrouble.categoryName && (
+                <span className="text-xs px-2 py-0.5 rounded-full ml-2 whitespace-nowrap bg-white border text-lightgreen-700">
+                  {selectedTrouble.categoryName}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="px-4 py-4">
         <div className="mb-6">
@@ -160,22 +268,35 @@ export default function TroublesPage() {
             <div className="space-y-2">
               <div>
                 <h4 className="font-medium text-sm text-lightgreen-800">
-                  ナノ粒子を用いた空気浄化素材開発
+                  {projectInfo.title}
                 </h4>
-                <p className="text-xs text-lightgreen-600">フクロウ</p>
+                <p className="text-xs text-lightgreen-600">
+                  {projectInfo.owner}
+                </p>
               </div>
               <div>
                 <h5 className="text-xs font-medium text-lightgreen-700">
                   プロジェクト概要
                 </h5>
                 <p className="text-xs text-lightgreen-600">
-                  PM2.5やVOC（揮発性有機化合物）を吸着・分解する機能を持つナノ粒子を活用し、建材やフィルターへの応用を目指す共創プロジェクト。
+                  {projectInfo.description}
                 </p>
               </div>
+              {projectInfo.category && (
+                <div>
+                  <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-lightgreen-100 text-lightgreen-700">
+                    {projectInfo.category}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <TroubleList />
+          {/* コンポーネント名を変更して使用 */}
+          <TroubleListComponent
+            projectId={projectInfo.id}
+            onTroubleSelect={handleTroubleSelect} // ← ハンドラーを追加
+          />
         </div>
 
         <div className="space-y-6">

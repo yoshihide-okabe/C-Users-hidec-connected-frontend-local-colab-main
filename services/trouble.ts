@@ -70,9 +70,9 @@ export const getTroublesByProject = async (
       typeof numericProjectId
     );
 
-    // APIリクエスト
+    // 修正後のコード：
     const response = await fetch(
-      `${API_URL}/api/v1/troubles/project/${numericProjectId}`,
+      `${API_URL}/api/v1/troubles?project_id=${numericProjectId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
