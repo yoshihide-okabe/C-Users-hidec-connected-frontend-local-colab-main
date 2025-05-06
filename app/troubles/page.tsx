@@ -181,6 +181,50 @@ export default function TroublesPage() {
     }
   };
 
+  // ここを追加: メッセージ確認ページへの遷移処理
+  const handleMessagesClick = () => {
+    // 選択中のお困りごとがない場合
+    if (!selectedTrouble) {
+      toast({
+        title: "選択が必要です",
+        description: "先にお困りごとを選択してください",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // 選択中のお困りごと情報が確実に保存されていることを確認
+      if (!localStorage.getItem("selectedTroubleId")) {
+        localStorage.setItem(
+          "selectedTroubleId",
+          selectedTrouble.id.toString()
+        );
+        localStorage.setItem(
+          "selectedTroubleDescription",
+          selectedTrouble.description
+        );
+        localStorage.setItem("selectedTroubleStatus", selectedTrouble.status);
+        if (selectedTrouble.categoryName) {
+          localStorage.setItem(
+            "selectedTroubleCategory",
+            selectedTrouble.categoryName
+          );
+        }
+      }
+
+      // メッセージページに遷移
+      router.push("/messages");
+    } catch (error) {
+      console.error("画面遷移エラー:", error);
+      toast({
+        title: "エラー",
+        description: "画面遷移中にエラーが発生しました",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gradient-to-b from-lightgreen-50 to-white">
