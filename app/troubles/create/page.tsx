@@ -12,16 +12,19 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+// ====== getTroubleCategories をインポート ======
+import { getTroubleCategories, TroubleCategory } from "@/services/trouble";
 
 interface Project {
   project_id: number;
   title: string;
 }
 
-interface Category {
-  category_id: number;
-  name: string;
-}
+// ====== 修正: Category型をTroubleCategoryに置き換える（不要なので削除） ======
+//interface Category {
+//  category_id: number;
+//  name: string;
+//}
 
 export default function CreateTrouble() {
   const router = useRouter();
@@ -32,11 +35,13 @@ export default function CreateTrouble() {
     status: "未解決", // デフォルト値
   });
   const [projects, setProjects] = useState<Project[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<TroubleCategory[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
+  // ====== 追加: ローディング状態を管理 ======
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // ユーザーIDをローカルストレージから取得
@@ -52,7 +57,8 @@ export default function CreateTrouble() {
     fetchProjects();
 
     // カテゴリー一覧を取得
-    fetchCategories();
+    // ====== 修正: fetchCategoriesの代わりにfetchTroubleCategories関数を呼び出す ======
+    fetchTroubleCategories();
 
     // セッションストレージからプロジェクトIDを取得（前画面から遷移した場合）
     const currentProjectId = sessionStorage.getItem("currentProjectId");
@@ -66,7 +72,15 @@ export default function CreateTrouble() {
 
   const fetchProjects = async () => {
     try {
+      // ====== 追加: ローディング状態を設定 ======
+      setIsLoading(true);
+
       const token = localStorage.getItem("token");
+      // ====== 追加: tokenがない場合のエラーハンドリング ======
+      if (!token) {
+        throw new Error("認証情報がありません");
+      }
+
       const response = await fetch(
         "http://localhost:8000/api/v1/projects/user",
         {
@@ -84,39 +98,43 @@ export default function CreateTrouble() {
     } catch (error) {
       console.error("プロジェクト取得エラー:", error);
       setError("プロジェクトの取得中にエラーが発生しました");
+
+      // ====== 追加: エラー時にモックデータを設定 ======
+      setProjects([
+        { project_id: 1, title: "オンライン学習プラットフォーム - フクロウ" },
+        { project_id: 2, title: "地域コミュニティアプリ - タヌキ" },
+        { project_id: 3, title: "健康管理サービス - キツネ" },
+      ]);
+    } finally {
+      // ====== 追加: ローディング状態の終了 ======
+      setIsLoading(false);
     }
   };
 
-  // カテゴリー取得のAPIエンドポイントを修正
-  const fetchCategories = async () => {
+  // ====== 修正: fetchCategories関数の代わりにfetchTroubleCategories関数を追加 ======
+  const fetchTroubleCategories = async () => {
     try {
-      // ここにトークンの取得と送信を追加
-      const token = localStorage.getItem("token");
-      console.log("トークン取得:", token ? "成功" : "失敗");
-
-      const response = await fetch(
-        "http://localhost:8000/api/v1/trouble-categories",
-        {
-          method: "GET",
-          // ヘッダーに認証トークンを追加
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
-      } else {
-        setError("カテゴリーの取得に失敗しました");
-      }
+      setIsLoading(true);
+      // 実際のAPIからカテゴリーを取得
+      const categoriesData = await getTroubleCategories();
+      setCategories(categoriesData);
     } catch (error) {
       console.error("カテゴリー取得エラー:", error);
       setError("カテゴリーの取得中にエラーが発生しました");
+
+      // エラー時はデフォルトカテゴリーを設定
+      setCategories([
+        { category_id: 1, name: "技術問題" },
+        { category_id: 2, name: "設計・企画" },
+        { category_id: 3, name: "UI/UXデザイン" },
+        { category_id: 4, name: "コンテンツ制作" },
+        { category_id: 5, name: "モバイル開発" },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
+  // ====== ここまで追加 ======
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -235,110 +253,117 @@ export default function CreateTrouble() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label
-            htmlFor="project_id"
-            className="block font-medium text-gray-700"
-          >
-            プロジェクト <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="project_id"
-            name="project_id"
-            value={formData.project_id}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          >
-            <option value="">-- プロジェクトを選択 --</option>
-            {projects.map((project) => (
-              <option key={project.project_id} value={project.project_id}>
-                {project.title}
-              </option>
-            ))}
-          </select>
+      {/* ====== 修正: ローディング状態に応じて表示を切り替え ====== */}
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-pulse text-lightgreen-600">読み込み中...</div>
         </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label
+              htmlFor="project_id"
+              className="block font-medium text-gray-700"
+            >
+              プロジェクト <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="project_id"
+              name="project_id"
+              value={formData.project_id}
+              onChange={handleChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            >
+              <option value="">-- プロジェクトを選択 --</option>
+              {projects.map((project) => (
+                <option key={project.project_id} value={project.project_id}>
+                  {project.title}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="description"
-            className="block font-medium text-gray-700"
-          >
-            お困りごと内容 <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="お困りごとの詳細を入力してください"
-            rows={5}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          />
-          <p className="text-sm text-gray-500">
-            ※具体的な問題点や解決したいことを詳しく記載してください
-          </p>
-        </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="description"
+              className="block font-medium text-gray-700"
+            >
+              お困りごと内容 <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="お困りごとの詳細を入力してください"
+              rows={5}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            />
+            <p className="text-sm text-gray-500">
+              ※具体的な問題点や解決したいことを詳しく記載してください
+            </p>
+          </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="category_id"
-            className="block font-medium text-gray-700"
-          >
-            お困りごとカテゴリー <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="category_id"
-            name="category_id"
-            value={formData.category_id}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            required
-          >
-            <option value="">-- カテゴリーを選択 --</option>
-            {categories.map((cat) => (
-              <option key={cat.category_id} value={cat.category_id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="category_id"
+              className="block font-medium text-gray-700"
+            >
+              お困りごとカテゴリー <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="category_id"
+              name="category_id"
+              value={formData.category_id}
+              onChange={handleChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            >
+              <option value="">-- カテゴリーを選択 --</option>
+              {categories.map((cat) => (
+                <option key={cat.category_id} value={cat.category_id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="status" className="block font-medium text-gray-700">
-            ステータス
-          </label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="未解決">未解決</option>
-            <option value="解決">解決</option>
-          </select>
-        </div>
+          <div className="space-y-2">
+            <label htmlFor="status" className="block font-medium text-gray-700">
+              ステータス
+            </label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="未解決">未解決</option>
+              <option value="解決">解決</option>
+            </select>
+          </div>
 
-        <div className="flex gap-4 mt-8">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 font-medium rounded-md hover:bg-gray-300 transition-colors"
-          >
-            キャンセル
-          </button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex-1 py-3 px-4 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? "登録中..." : "登録する"}
-          </Button>
-        </div>
-      </form>
+          <div className="flex gap-4 mt-8">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 font-medium rounded-md hover:bg-gray-300 transition-colors"
+            >
+              キャンセル
+            </button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 py-3 px-4 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "登録中..." : "登録する"}
+            </Button>
+          </div>
+        </form>
+      )}
 
       {/* 成功後のモーダル */}
       <Dialog open={showModal} onOpenChange={setShowModal}>

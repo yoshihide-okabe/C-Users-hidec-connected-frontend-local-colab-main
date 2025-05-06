@@ -3,6 +3,48 @@
 // APIのベースURL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// ====== 追加: トラブルカテゴリーの型定義 ======
+export interface TroubleCategory {
+  category_id: number;
+  name: string;
+}
+
+// ====== 追加: トラブルカテゴリーを取得する関数 ======
+export const getTroubleCategories = async (): Promise<TroubleCategory[]> => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("認証情報がありません。再ログインしてください。");
+    }
+
+    // APIリクエスト
+    const response = await fetch(`${API_URL}/api/v1/trouble-categories`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`カテゴリーの取得に失敗しました: ${response.status}`);
+    }
+
+    const data: TroubleCategory[] = await response.json();
+    return data;
+  } catch (error) {
+    console.error("カテゴリー取得エラー:", error);
+
+    // エラー時はデフォルトのカテゴリーを返す
+    return [
+      { category_id: 1, name: "技術問題" },
+      { category_id: 2, name: "設計・企画" },
+      { category_id: 3, name: "UI/UXデザイン" },
+      { category_id: 4, name: "コンテンツ制作" },
+      { category_id: 5, name: "モバイル開発" },
+    ];
+  }
+};
+// ====== カテゴリー取得機能の追加ここまで ======
+
 // APIレスポンスの型
 interface ApiTrouble {
   trouble_id: number;

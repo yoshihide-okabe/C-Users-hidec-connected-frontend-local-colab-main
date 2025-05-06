@@ -14,7 +14,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Send } from "lucide-react";
-import { getTroublesByProject } from "@/services/trouble";
+// ====== 修正: getTroubleCategories をインポート ======
+import {
+  getTroublesByProject,
+  getTroubleCategories,
+  TroubleCategory,
+} from "@/services/trouble";
 
 // <!-- 修正: ApiTroubleインターフェースを追加 -->
 // APIから取得するトラブルの型
@@ -65,6 +70,9 @@ function getCategoryColor(category: string) {
     "UI/UXデザイン": "bg-purple-500",
     コンテンツ制作: "bg-blue-500",
     モバイル開発: "bg-orange-500",
+    // ====== 追加: 他のカテゴリーの色も定義 ======
+    技術問題: "bg-red-500",
+    "設計・企画": "bg-green-500",
   };
 
   return colors[category] || "bg-lightgreen-500";
@@ -76,6 +84,9 @@ function getCategoryBadgeStyle(category: string) {
     "UI/UXデザイン": "bg-purple-50 text-purple-700 border-purple-200",
     コンテンツ制作: "bg-blue-50 text-blue-700 border-blue-200",
     モバイル開発: "bg-orange-50 text-orange-700 border-orange-200",
+    // ====== 追加: 他のカテゴリーのスタイルも定義 ======
+    技術問題: "bg-red-50 text-red-700 border-red-200",
+    "設計・企画": "bg-green-50 text-green-700 border-green-200",
   };
 
   return (
@@ -84,27 +95,47 @@ function getCategoryBadgeStyle(category: string) {
   );
 }
 
-// <!-- 修正: カテゴリIDを名前に変換する関数を追加 -->
-// カテゴリIDを名前に変換する関数
-function getCategoryName(categoryId: number): string {
-  // カテゴリIDと名前のマッピング
-  const categoryMap: Record<number, string> = {
-    1: "技術問題",
-    2: "設計・企画",
-    3: "UI/UXデザイン",
-    4: "コンテンツ制作",
-    5: "モバイル開発",
-    // 他のカテゴリも追加
-  };
-
-  return categoryMap[categoryId] || "その他";
-}
-
 export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
   const [troubles, setTroubles] = useState<Trouble[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // <!-- 修正: エラー状態を追加 -->
   const [error, setError] = useState<string | null>(null);
+
+  // ====== 追加: カテゴリー関連のステート ======
+  const [categories, setCategories] = useState<TroubleCategory[]>([]);
+  const [categoryMap, setCategoryMap] = useState<Record<number, string>>({});
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  // ====== カテゴリー関連のステート追加ここまで ======
+
+  // ====== 追加: カテゴリー情報をAPIから取得する処理 ======
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await getTroubleCategories();
+        setCategories(categoriesData);
+
+        // カテゴリーIDと名前のマッピングを作成
+        const catMap: Record<number, string> = {};
+        categoriesData.forEach((cat) => {
+          catMap[cat.category_id] = cat.name;
+        });
+        setCategoryMap(catMap);
+      } catch (error) {
+        console.error("カテゴリー取得エラー:", error);
+        // エラー時もデフォルトカテゴリーを設定
+        setCategoryMap({
+          1: "技術問題",
+          2: "設計・企画",
+          3: "UI/UXデザイン",
+          4: "コンテンツ制作",
+          5: "モバイル開発",
+        });
+      }
+    };
+
+    fetchCategories();
+  }, []);
+  // ====== カテゴリー取得処理追加ここまで ======
 
   useEffect(() => {
     const fetchTroubles = async () => {
@@ -137,8 +168,8 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
 
         // 結果をUI用のTrouble型に変換
         const formattedTroubles: Trouble[] = fetchedTroubles.map((trouble) => {
-          // カテゴリー名を先に定義
-          const categoryName = getCategoryName(trouble.categoryId);
+          const categoryName = categoryMap[trouble.categoryId] || "その他";
+          // ====== カテゴリー名取得方法の修正ここまで ======
 
           return {
             id: trouble.id,
@@ -162,8 +193,11 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
       }
     };
 
-    fetchTroubles();
-  }, [projectId]);
+    // ====== 修正: カテゴリーマップが準備できたらトラブルを取得するように変更 ======
+    if (Object.keys(categoryMap).length > 0) {
+      fetchTroubles();
+    }
+  }, [projectId, categoryMap]); // ====== 修正: 依存配列にcategoryMapを追加 ======
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -176,6 +210,24 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
         return "bg-amber-100 text-amber-700";
     }
   };
+
+  // ====== 追加: フィルター適用したトラブル一覧を取得する関数 ======
+  const getFilteredTroubles = () => {
+    let filtered = troubles;
+
+    // カテゴリーフィルター
+    if (selectedCategory !== null) {
+      filtered = filtered.filter((t) => t.categoryId === selectedCategory);
+    }
+
+    // ステータスフィルター
+    if (selectedStatus !== null) {
+      filtered = filtered.filter((t) => t.status === selectedStatus);
+    }
+
+    return filtered;
+  };
+  // ====== フィルター関数追加ここまで ======
 
   // 追加: お困りごとのクリックハンドラー
   const handleTroubleClick = (event: React.MouseEvent, trouble: Trouble) => {
@@ -199,6 +251,10 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
       });
     }
   };
+
+  // ====== 修正: フィルタリングされたトラブルリストを取得 ======
+  const filteredTroubles = getFilteredTroubles();
+  // ====== フィルター適用ここまで ======
 
   if (isLoading) {
     return (
@@ -225,6 +281,38 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
     );
   }
 
+  // ====== 追加: カテゴリーフィルターUI ======
+  const renderCategoryFilters = () => {
+    return (
+      <div className="flex flex-wrap gap-2 pb-3 overflow-x-auto scrollbar-thin">
+        {categories.map((category) => (
+          <Button
+            key={category.category_id}
+            variant={
+              selectedCategory === category.category_id ? "default" : "outline"
+            }
+            size="sm"
+            className={`rounded-full text-xs ${
+              selectedCategory === category.category_id
+                ? "bg-lightgreen-500 text-white"
+                : "border-lightgreen-300 bg-white text-lightgreen-700 hover:bg-lightgreen-50"
+            }`}
+            onClick={() =>
+              setSelectedCategory(
+                selectedCategory === category.category_id
+                  ? null
+                  : category.category_id
+              )
+            }
+          >
+            {category.name}
+          </Button>
+        ))}
+      </div>
+    );
+  };
+  // ====== カテゴリーフィルターUI追加ここまで ======
+
   if (troubles.length === 0) {
     return (
       <div className="w-full py-6 bg-lightgreen-50 rounded-xl border border-lightgreen-200 flex flex-col items-center justify-center">
@@ -244,7 +332,11 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
 
   return (
     <div className="space-y-3">
-      {troubles.map((trouble) => (
+      {/* ====== 追加: カテゴリーフィルターを表示 ====== */}
+      {categories.length > 0 && renderCategoryFilters()}
+
+      {/* ====== 修正: filteredTroublesを使用 ====== */}
+      {filteredTroubles.map((trouble) => (
         <div
           key={trouble.id}
           onClick={(e) => handleTroubleClick(e, trouble)}
@@ -261,8 +353,13 @@ export function TroubleList({ projectId, onTroubleSelect }: TroubleListProps) {
                   >
                     {trouble.status}
                   </span>
-                  <span className="bg-lightgreen-100 text-lightgreen-700 px-2 py-0.5 rounded-full text-xs">
-                    {trouble.category}
+                  {/* ====== 修正: 動的に取得したカテゴリー名を表示 ====== */}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs ${getCategoryBadgeStyle(
+                      trouble.categoryName || ""
+                    )}`}
+                  >
+                    {trouble.categoryName || "その他"}
                   </span>
                 </div>
                 <h3 className="font-medium text-lightgreen-800 mt-1">
