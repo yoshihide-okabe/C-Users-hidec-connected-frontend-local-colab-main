@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ThumbsUp, ThumbsDown, MessageSquare, Star, Clock } from "lucide-react"
+import { getProjects, toggleFavorite, Project } from "@/services/projects"
+import { useToast } from "@/hooks/use-toast"
 
 // 動物の種類に基づいた背景色を取得する関数
 function getAnimalColor(animal: string) {
@@ -26,7 +28,7 @@ function getAnimalColor(animal: string) {
     ライオン: "bg-yellow-600",
   }
 
-  return colors[animal] || "bg-lightgreen-500"
+  return colors[animal.substring(0, 1)] || "bg-lightgreen-500"
 }
 
 // カテゴリに基づいた色を取得する関数
@@ -67,177 +69,139 @@ function getCategoryBadgeStyle(category: string) {
   return styles[category] || "bg-lightgreen-50 text-lightgreen-700 border-lightgreen-200"
 }
 
+  // 時間を「◯時間前」の形式で表示する関数
+  function getTimeAgo(dateString: string) {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
+
+    if (diffInHours < 1) {
+      return "たった今";
+    } else if (diffInHours < 24) {
+      return `${diffInHours}時間前`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays}日前`;
+    }
+  }
+
 type ProjectType = "new" | "favorite"
 
 interface ProjectGridProps {
   type: ProjectType
+  limit?: number
 }
 
 export function ProjectGrid({ type }: ProjectGridProps) {
+  const { toast } = useToast()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // プロジェクトデータ内の名前を動物の名前に変更します
+  // APIからプロジェクト一覧を取得
+  useEffect(() => {
+    async function fetchProjects() {
+      setIsLoading(true)
+        try {
+          const data = await getProjects(type, limit)
+          setProjects(data)
+        } catch (err) {
+          console.error("プロジェクト取得エラー:", err)
+          setError(err instanceof Error ? err.message : "データの取得に失敗しました")
+        } finally {
+          setIsLoading(false)
+        }
+      }
 
-  const projects =
-    type === "new"
-      ? [
-          {
-            id: "1",
-            title: "地域コミュニティアプリの開発",
-            author: "キツネ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "テクノロジー",
-            likes: 24,
-            comments: 8,
-            createdAt: "2時間前",
-            isFavorite: false,
-          },
-          {
-            id: "2",
-            title: "サステナブルファッションブランドの立ち上げ",
-            author: "パンダ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "ビジネス",
-            likes: 18,
-            comments: 5,
-            createdAt: "3時間前",
-            isFavorite: false,
-          },
-          {
-            id: "3",
-            title: "高齢者向け健康管理アプリ",
-            author: "ウサギ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "医療",
-            likes: 32,
-            comments: 12,
-            createdAt: "5時間前",
-            isFavorite: false,
-          },
-          {
-            id: "4",
-            title: "環境に優しい配送サービス",
-            author: "カメ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "環境",
-            likes: 15,
-            comments: 3,
-            createdAt: "8時間前",
-            isFavorite: false,
-          },
-          {
-            id: "5",
-            title: "子ども向けプログラミング教室",
-            author: "ペンギン",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "教育",
-            likes: 27,
-            comments: 9,
-            createdAt: "10時間前",
-            isFavorite: false,
-          },
-          {
-            id: "10",
-            title: "地域農産物直売所アプリ",
-            author: "イヌ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "農業",
-            likes: 21,
-            comments: 6,
-            createdAt: "12時間前",
-            isFavorite: false,
-          },
-          {
-            id: "11",
-            title: "リモートワーカー向けコワーキングスペース",
-            author: "ネコ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "ワークスタイル",
-            likes: 19,
-            comments: 4,
-            createdAt: "15時間前",
-            isFavorite: false,
-          },
-          {
-            id: "12",
-            title: "障がい者向けスポーツイベント",
-            author: "ライオン",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "スポーツ",
-            likes: 31,
-            comments: 11,
-            createdAt: "18時間前",
-            isFavorite: false,
-          },
-        ]
-      : [
-          {
-            id: "6",
-            title: "オンライン学習プラットフォーム",
-            author: "フクロウ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "教育",
-            likes: 45,
-            comments: 17,
-            createdAt: "1日前",
-            isFavorite: true,
-          },
-          {
-            id: "7",
-            title: "フードロス削減アプリ",
-            author: "クマ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "環境",
-            likes: 38,
-            comments: 9,
-            createdAt: "2日前",
-            isFavorite: true,
-          },
-          {
-            id: "8",
-            title: "シニア向けSNSサービス",
-            author: "ゾウ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "コミュニティ",
-            likes: 29,
-            comments: 14,
-            createdAt: "3日前",
-            isFavorite: true,
-          },
-          {
-            id: "9",
-            title: "地域特産品マーケットプレイス",
-            author: "シカ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "ビジネス",
-            likes: 33,
-            comments: 7,
-            createdAt: "4日前",
-            isFavorite: true,
-          },
-          {
-            id: "13",
-            title: "伝統工芸品のオンラインショップ",
-            author: "タヌキ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "文化",
-            likes: 26,
-            comments: 8,
-            createdAt: "5日前",
-            isFavorite: true,
-          },
-          {
-            id: "14",
-            title: "子育て世代向け情報共有アプリ",
-            author: "コアラ",
-            avatar: "/placeholder.svg?height=40&width=40",
-            category: "子育て",
-            likes: 41,
-            comments: 15,
-            createdAt: "6日前",
-            isFavorite: true,
-          },
-        ]
+      fetchProjects()
+    }, [type, limit])
+
+    // お気に入り機能
+    const handleToggleFavorite = async (projectId: number, isFavorite: boolean, e: React.MouseEvent) => {
+      e.stopPropagation() // プロジェクト選択イベントを防止
+
+      try {
+        // APIでお気に入り状態を更新
+        const newFavoriteState = await toggleFavorite(projectId, isFavorite)
+
+        // プロジェクトリストを更新
+        setProjects((prev) =>
+          prev.map((project) =>
+            project.id === projectId
+              ? { ...project, isFavorite: newFavoriteState }
+              : project
+          )
+        )
+
+        toast({
+          title: isFavorite ? "お気に入りから削除" : "お気に入りに追加",
+          description: `プロジェクトを${isFavorite ? "お気に入りから削除" : "お気に入りに追加"}しました`,
+        })
+      } catch (error) {
+        console.error("お気に入り操作エラー:", error)
+        toast({
+          title: "エラー",
+          description: error instanceof Error ? error.message : "お気に入り操作に失敗しました",
+          variant: "destructive",
+        })
+      }
+    }
+
+    // プロジェクト選択時の処理
+    const handleProjectSelect = (project: Project) => {
+      setSelectedProject(project.id.toString())
+
+      // ローカルストレージに保存
+      try {
+        localStorage.setItem("selectedProjectId", project.id.toString())
+        localStorage.setItem("selectedProjectTitle", project.title)
+        localStorage.setItem("selectedProjectDescription", project.description)
+        localStorage.setItem("selectedProjectOwner", project.owner)
+        localStorage.setItem("selectedProjectCategory", project.category)
+
+        toast({
+          title: "プロジェクト選択",
+          description: `「${project.title}」を選択しました`,
+        })
+      } catch (error) {
+        console.error("プロジェクト情報の保存エラー:", error)
+        toast({
+          title: "エラー",
+          description: "プロジェクト情報の保存に失敗しました",
+          variant: "destructive",
+        })
+      }
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-8">
+          <div className="animate-pulse text-lightgreen-600">読み込み中...</div>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-600">
+          <p className="font-medium">エラーが発生しました</p>
+          <p className="text-sm">{error}</p>
+          <button
+            className="mt-2 px-3 py-1 text-sm border border-red-300 rounded text-red-600 hover:bg-red-50"
+            onClick={() => window.location.reload()}
+          >
+            再読み込み
+          </button>
+        </div>
+      )
+    }
+
+
+
+
 
   return (
     <div>
@@ -248,21 +212,21 @@ export function ProjectGrid({ type }: ProjectGridProps) {
             className={`cursor-pointer transition-all rounded-2xl border-lightgreen-200 bg-white hover:shadow-md hover:-translate-y-1 overflow-hidden ${
               selectedProject === project.id ? "ring-2 ring-lightgreen-400 shadow-lg" : "shadow-sm"
             }`}
-            onClick={() => setSelectedProject(project.id)}
+            onClick={() => handleProjectSelect(project)}
           >
             <div className={`h-1 w-full ${getCategoryColor(project.category)}`} />
             <CardHeader className="pb-2 pt-3 px-3">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
-                    <AvatarImage src={project.avatar} alt={project.author} />
-                    <AvatarFallback className={`text-white font-semibold ${getAnimalColor(project.author)}`}>
-                      {project.author.substring(0, 1)}
+                    <AvatarImage src="/placeholder.svg?height=40&width=40" alt={project.owner} />
+                    <AvatarFallback className={`text-white font-semibold ${getAnimalColor(project.owner)}`}>
+                      {project.owner.substring(0, 1)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <CardTitle className="text-base text-lightgreen-800">{project.title}</CardTitle>
-                    <div className="text-xs text-lightgreen-600">{project.author}</div>
+                    <div className="text-xs text-lightgreen-600">{project.owner}</div>
                   </div>
                 </div>
               </div>
@@ -276,23 +240,23 @@ export function ProjectGrid({ type }: ProjectGridProps) {
                   {project.category}
                 </Badge>
               </div>
-              <p className="text-xs text-lightgreen-600">
-                プロジェクトの詳細説明がここに表示されます。参加者を募集中です。
+              <p className="text-xs text-lightgreen-600 line-clamp-2">
+                {project.description}
               </p>
             </CardContent>
             <CardFooter className="flex justify-between pt-0 px-3 pb-3">
               <div className="flex items-center gap-3 text-xs text-lightgreen-600">
                 <div className="flex items-center">
                   <ThumbsUp className="mr-1 h-3 w-3" />
-                  {project.likes}
+                  {project.likesCount || 0}
                 </div>
                 <div className="flex items-center">
                   <MessageSquare className="mr-1 h-3 w-3" />
-                  {project.comments}
+                  {{project.commentsCount || 0}
                 </div>
                 <div className="flex items-center">
                   <Clock className="mr-1 h-3 w-3" />
-                  {project.createdAt}
+                  {getTimeAgo(project.createdAt)}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -320,6 +284,7 @@ export function ProjectGrid({ type }: ProjectGridProps) {
                       ? "bg-lightgreen-500 text-white hover:bg-lightgreen-600 shadow-md"
                       : "border-lightgreen-300 bg-lightgreen-50 text-lightgreen-700 hover:bg-lightgreen-100 shadow-sm hover:shadow"
                   }`}
+                  onClick={(e) => handleToggleFavorite(project.id, project.isFavorite, e)}
                 >
                   <Star className="h-4 w-4" fill={project.isFavorite ? "currentColor" : "none"} />
                   <span className="sr-only">お気に入り</span>

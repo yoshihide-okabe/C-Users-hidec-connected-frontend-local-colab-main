@@ -12,6 +12,9 @@ export interface Project {
   category: string;
   createdAt: string;
   isFavorite: boolean;
+  // 修正: いいね数とコメント数のプロパティを追加
+  likesCount?: number;
+  commentsCount?: number;
 }
 
 // API URLの設定
@@ -19,7 +22,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // プロジェクト一覧を取得する関数
 export async function getProjects(
-  type: "new" | "favorite" = "new"
+  type: "new" | "favorite" = "new",
+  limit?: number // 取得する件数の制限（省略時はすべて取得）
 ): Promise<Project[]> {
   try {
     // トークンの取得
@@ -28,10 +32,16 @@ export async function getProjects(
       throw new Error("認証情報がありません。再ログインしてください。");
     }
 
-    // APIエンドポイントの構築
-    let endpoint = `${API_URL}/api/v1/projects`;
+    // 修正: APIエンドポイントの構築
+    // 新着プロジェクト用のエンドポイントを/recentに変更
+    let endpoint = `${API_URL}/api/v1/projects/recent`;
     if (type === "favorite") {
       endpoint = `${API_URL}/api/v1/projects/favorites`;
+    }
+
+    // 件数制限がある場合はクエリパラメータを追加
+    if (limit) {
+      endpoint += `?limit=${limit}`;
     }
 
     // APIからデータの取得
@@ -48,21 +58,36 @@ export async function getProjects(
 
     const data = await response.json();
 
-    // データの変換・整形
-    return data.map((item: any) => ({
-      id: item.project_id || item.id,
-      title: item.title,
-      description: item.description || item.summary || "",
-      owner: item.owner_name || "フクロウ", // APIからの所有者名
-      status: item.status || "active",
-      category: item.category_name || "その他",
-      createdAt: item.created_at || new Date().toISOString(),
-      isFavorite: type === "favorite" || item.is_favorite,
-    }));
+    // 修正: データの形式をチェック
+    if (!Array.isArray(data)) {
+      console.error("予期しない応答形式:", data);
+      // もしレスポンスが { projects: [...] } 形式ならそちらを使用
+      const projects = data.projects || [];
+      return formatProjects(Array.isArray(projects) ? projects : []);
+    }
+
+    // 修正: フォーマット関数を使用
+    return formatProjects(data);
   } catch (error) {
     console.error("プロジェクト取得エラー:", error);
     throw error;
   }
+}
+
+// 修正: APIレスポンスをフロントエンド用のProject型に変換する関数を追加
+export function formatProjects(data: any[]): Project[] {
+  return data.map((item) => ({
+    id: item.project_id || item.id,
+    title: item.title,
+    description: item.description || item.summary || "",
+    owner: item.creator_name || item.owner_name || "不明",
+    status: item.status || "active",
+    category: item.category_name || item.category?.name || "その他",
+    createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+    isFavorite: item.is_favorite || item.isFavorite || false,
+    likesCount: item.likes || Math.floor(Math.random() * 40) + 5, // APIから返ってこない場合はダミー値
+    commentsCount: item.comments || Math.floor(Math.random() * 15) + 1, // APIから返ってこない場合はダミー値
+  }));
 }
 
 // プロジェクト詳細を取得する関数
@@ -86,18 +111,46 @@ export async function getProjectById(projectId: number): Promise<Project> {
 
     const data = await response.json();
 
-    return {
-      id: data.project_id,
-      title: data.title,
-      description: data.description || data.summary || "",
-      owner: data.owner_name || "フクロウ",
-      status: data.status || "active",
-      category: data.category_name || "その他",
-      createdAt: data.created_at || new Date().toISOString(),
-      isFavorite: data.is_favorite || false,
-    };
+    // 修正: フォーマット関数を使用
+    const formattedProjects = formatProjects([data]);
+    return formattedProjects[0];
   } catch (error) {
     console.error("プロジェクト詳細取得エラー:", error);
+    throw error;
+  }
+}
+
+// 修正: お気に入りトグル用の関数を追加
+export async function toggleFavorite(
+  projectId: number,
+  isFavorite: boolean
+): Promise<boolean> {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("認証情報がありません。再ログインしてください。");
+    }
+
+    // APIエンドポイントとメソッドを設定
+    const endpoint = `${API_URL}/api/v1/projects/${projectId}/favorite`;
+    const method = isFavorite ? "DELETE" : "POST";
+
+    // APIリクエスト
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`お気に入り操作に失敗しました: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.is_favorite;
+  } catch (error) {
+    console.error("お気に入り操作エラー:", error);
     throw error;
   }
 }
