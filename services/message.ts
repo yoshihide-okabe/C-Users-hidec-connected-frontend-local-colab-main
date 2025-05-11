@@ -112,13 +112,13 @@ export async function sendMessage(
     const requestData: {
       trouble_id: number;
       content: string;
-      parent_message_id?: number;
+      parent_message_id?: number; // オプショナルプロパティとして定義
     } = {
       trouble_id: troubleId,
       content: content,
     };
 
-    // 親メッセージIDが指定されている場合は追加
+    // 親メッセージIDがある場合のみ追加
     if (parentMessageId) {
       requestData.parent_message_id = parentMessageId;
     }
@@ -126,7 +126,6 @@ export async function sendMessage(
     // 修正/追加: リクエストデータをログ出力
     console.log("送信するメッセージデータ:", requestData);
 
-    // APIにメッセージを送信
     const response = await fetch(`${API_URL}/api/v1/messages`, {
       method: "POST",
       headers: {
@@ -136,17 +135,17 @@ export async function sendMessage(
       body: JSON.stringify(requestData),
     });
 
+    // レスポンスをチェック
     if (!response.ok) {
-      // 修正/追加: エラーレスポンスの詳細を取得
       const errorText = await response.text();
-      console.error("メッセージ送信エラーレスポンス:", errorText);
-      throw new Error(`メッセージの送信に失敗しました: ${response.status}`);
+      console.error("Error response:", errorText);
+      throw new Error(`API error: ${response.status}`);
     }
 
     const data: Message = await response.json();
     return data;
   } catch (error) {
-    console.error("メッセージ送信エラー:", error);
+    console.error("Message sending error details:", error);
     throw error;
   }
 }
