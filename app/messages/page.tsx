@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Bell, Users, Crown } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Participant,
+  getParticipantsByTroubleId,
+} from "@/services/participants";
 
 export default function MessagesPage() {
   // お困りごと情報のステート
@@ -17,9 +21,14 @@ export default function MessagesPage() {
     userInitial: "キ", // デフォルト値
   });
 
+  // 参加者リストのステート
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   // コンポーネントマウント時にローカルストレージから情報を取得
   useEffect(() => {
     // ローカルストレージからお困りごと情報を取得
+    const troubleId = localStorage.getItem("selectedTroubleId") || "";
     const projectTitle = localStorage.getItem("selectedProjectTitle") || "";
     const projectOwner = localStorage.getItem("selectedProjectOwner") || "";
     const troubleDescription =
@@ -36,7 +45,27 @@ export default function MessagesPage() {
       troubleDescription,
       userInitial,
     });
+
+    // お困りごとIDが存在する場合は参加者を取得
+    if (troubleId) {
+      fetchParticipants(troubleId);
+    } else {
+      setIsLoading(false);
+    }
   }, []);
+
+  // 参加者を取得する関数
+  const fetchParticipants = async (troubleId: string) => {
+    try {
+      setIsLoading(true);
+      const data = await getParticipantsByTroubleId(troubleId);
+      setParticipants(data);
+    } catch (error) {
+      console.error("参加者取得エラー:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="pb-20 bg-gradient-to-b from-lightgreen-50 to-white">
@@ -110,64 +139,50 @@ export default function MessagesPage() {
             </div>
             参加者
           </h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 px-1">
-            <div className="flex flex-col items-center min-w-[70px] bg-lightgreen-50 rounded-xl p-2 shadow-sm">
-              <div className="relative">
-                <Avatar className="h-12 w-12 mb-2 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
-                  <AvatarImage
-                    src="/placeholder.svg?height=40&width=40"
-                    alt="フクロウ"
-                  />
-                  <AvatarFallback className="bg-amber-700 text-white font-semibold">
-                    フ
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-1 -right-1 bg-lightgreen-500 text-white rounded-full p-1 shadow-sm">
-                  <Crown className="h-3 w-3" />
+
+          {isLoading ? (
+            <div className="flex justify-center py-2">
+              <div className="text-lightgreen-600 text-sm">読み込み中...</div>
+            </div>
+          ) : participants.length > 0 ? (
+            <div className="flex gap-3 overflow-x-auto pb-2 px-1">
+              {participants.map((participant) => (
+                <div
+                  key={participant.user_id}
+                  className="flex flex-col items-center min-w-[70px] bg-lightgreen-50 rounded-xl p-2 shadow-sm"
+                >
+                  <div className="relative">
+                    <Avatar className="h-12 w-12 mb-2 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
+                      <AvatarFallback
+                        className={
+                          participant.role === "オーナー"
+                            ? "bg-amber-700 text-white font-semibold"
+                            : "bg-orange-500 text-white font-semibold"
+                        }
+                      >
+                        {participant.avatar}
+                      </AvatarFallback>
+                    </Avatar>
+                    {participant.role === "オーナー" && (
+                      <div className="absolute -bottom-1 -right-1 bg-lightgreen-500 text-white rounded-full p-1 shadow-sm">
+                        <Crown className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs font-medium text-lightgreen-800">
+                    {participant.name}
+                  </div>
+                  <div className="text-[10px] text-lightgreen-600 bg-lightgreen-200 px-2 py-0.5 rounded-full mt-1">
+                    {participant.role}
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs font-medium text-lightgreen-800">
-                フクロウ
-              </div>
-              <div className="text-[10px] text-lightgreen-600 bg-lightgreen-200 px-2 py-0.5 rounded-full mt-1">
-                オーナー
-              </div>
+              ))}
             </div>
-            <div className="flex flex-col items-center min-w-[70px] bg-lightgreen-50 rounded-xl p-2 shadow-sm">
-              <Avatar className="h-12 w-12 mb-2 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
-                <AvatarImage
-                  src="/placeholder.svg?height=40&width=40"
-                  alt="キツネ"
-                />
-                <AvatarFallback className="bg-orange-500 text-white font-semibold">
-                  キ
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-xs font-medium text-lightgreen-800">
-                キツネ
-              </div>
-              <div className="text-[10px] text-lightgreen-600 bg-lightgreen-200 px-2 py-0.5 rounded-full mt-1">
-                応援者
-              </div>
+          ) : (
+            <div className="text-center py-2 text-lightgreen-600 text-sm">
+              参加者がいません
             </div>
-            <div className="flex flex-col items-center min-w-[70px] bg-lightgreen-50 rounded-xl p-2 shadow-sm">
-              <Avatar className="h-12 w-12 mb-2 border-2 border-lightgreen-200 shadow-sm ring-2 ring-white">
-                <AvatarImage
-                  src="/placeholder.svg?height=40&width=40"
-                  alt="パンダ"
-                />
-                <AvatarFallback className="bg-gray-800 text-white font-semibold">
-                  パ
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-xs font-medium text-lightgreen-800">
-                パンダ
-              </div>
-              <div className="text-[10px] text-lightgreen-600 bg-lightgreen-200 px-2 py-0.5 rounded-full mt-1">
-                応援者
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         <MessageThread />
