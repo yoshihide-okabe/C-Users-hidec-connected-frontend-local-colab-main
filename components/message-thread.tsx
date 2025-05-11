@@ -35,12 +35,16 @@ export function MessageThread({ troubleId }: MessageThreadProps) {
         const storedTroubleId =
           troubleId || localStorage.getItem("selectedTroubleId");
 
-        // お困りごとIDがない場合はダミーデータを表示
+        // お困りごとIDがない場合はエラーメッセージを表示
         if (!storedTroubleId) {
-          console.log(
-            "選択中のお困りごとIDがありません。ダミーデータを表示します。"
-          );
-          setMessages(getDummyMessages());
+          console.log("選択中のお困りごとIDがありません。");
+          setMessages([]);
+          toast({
+            title: "エラー",
+            description:
+              "お困りごとが選択されていません。お困りごとを選択してください。",
+            variant: "destructive",
+          });
           setIsLoading(false);
           return;
         }
@@ -55,17 +59,12 @@ export function MessageThread({ troubleId }: MessageThreadProps) {
         const fetchedMessages = await getMessagesByTroubleId(storedTroubleId);
         console.log("取得したメッセージ:", fetchedMessages);
 
+        // メッセージを設定
+        setMessages(fetchedMessages);
+
         // メッセージが0件の場合
         if (fetchedMessages.length === 0) {
-          console.log(
-            "メッセージが見つかりませんでした。ダミーデータを表示します。"
-          );
-          setMessages(getDummyMessages());
-        } else {
-          console.log("メッセージを取得しました:", fetchedMessages);
-
-          // 修正: レスポンスデータが直接使えるので変換不要
-          setMessages(fetchedMessages);
+          console.log("メッセージが見つかりませんでした。");
         }
       } catch (error) {
         console.error("メッセージ取得エラー:", error);
@@ -74,8 +73,8 @@ export function MessageThread({ troubleId }: MessageThreadProps) {
           description: "メッセージの読み込みに失敗しました",
           variant: "destructive",
         });
-        // エラー時はダミーデータを表示
-        setMessages(getDummyMessages());
+        // エラー時は空の配列をセット
+        setMessages([]);
       } finally {
         setIsLoading(false);
       }
@@ -137,23 +136,26 @@ export function MessageThread({ troubleId }: MessageThreadProps) {
         variant: "destructive",
       });
 
-      // APIが失敗しても、ユーザー体験のためにローカルでメッセージを追加
-      const dummySentMessage: Message = {
-        message_id: Date.now(), // 一時的なID
-        trouble_id: Number(
-          troubleId || localStorage.getItem("selectedTroubleId") || 0
-        ),
-        sender_user_id: Number(localStorage.getItem("userId") || 0),
-        sender_name: localStorage.getItem("userName") || "あなた",
-        content: newMessage,
-        sent_at: new Date().toISOString(),
-        parent_message_id: replyToMessage?.message_id,
-      };
+      // 開発環境でのみダミーメッセージを表示
+      if (process.env.NODE_ENV === "development") {
+        // APIが失敗した場合、開発環境では仮のメッセージを表示（デバッグ用）
+        const dummySentMessage: Message = {
+          message_id: Date.now(), // 一時的なID
+          trouble_id: Number(
+            troubleId || localStorage.getItem("selectedTroubleId") || 0
+          ),
+          sender_user_id: Number(localStorage.getItem("userId") || 0),
+          sender_name: localStorage.getItem("userName") || "あなた",
+          content: newMessage,
+          sent_at: new Date().toISOString(),
+          parent_message_id: replyToMessage?.message_id,
+        };
 
-      setMessages([...messages, dummySentMessage]);
-      setNewMessage("");
-      if (replyToMessage) {
-        setReplyToMessage(null);
+        setMessages([...messages, dummySentMessage]);
+        setNewMessage("");
+        if (replyToMessage) {
+          setReplyToMessage(null);
+        }
       }
     } finally {
       setIsSending(false);
@@ -163,61 +165,6 @@ export function MessageThread({ troubleId }: MessageThreadProps) {
   // 返信ボタンのハンドラー
   const handleReply = (message: Message) => {
     setReplyToMessage(message);
-  };
-
-  // ダミーメッセージ生成関数
-  const getDummyMessages = (): Message[] => {
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    return [
-      {
-        message_id: 1,
-        trouble_id: 1,
-        sender_user_id: 1,
-        sender_name: "フクロウ",
-        content:
-          "こちらのお困りごとについて相談させていただきます。ユーザー登録フローを改善したいのですが、現在の離脱率が高くて問題となっています。",
-        sent_at: yesterday.toISOString(),
-      },
-      {
-        message_id: 2,
-        trouble_id: 1,
-        sender_user_id: 2,
-        sender_name: "キツネ",
-        content:
-          "こんにちは！確かにユーザー登録フローは改善の余地がありそうですね。現在のフローの具体的な問題点を教えていただけますか？",
-        sent_at: new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        message_id: 3,
-        trouble_id: 1,
-        sender_user_id: 1,
-        sender_name: "フクロウ",
-        content:
-          "現在は6ステップあり、特にメールアドレス確認と趣味の入力で離脱が多いです。もっとシンプルにしたいと考えています。",
-        sent_at: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        message_id: 4,
-        trouble_id: 1,
-        sender_user_id: 3,
-        sender_name: "パンダ",
-        content:
-          "私も参加させていただきます。SNSログインを導入すると、ステップ数が減らせるのではないでしょうか？多くのユーザーはGoogleアカウントやApple IDを持っていると思います。",
-        sent_at: new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        message_id: 5,
-        trouble_id: 1,
-        sender_user_id: 2,
-        sender_name: "キツネ",
-        content:
-          "パンダさんの意見に賛成です。SNSログインはユーザー獲得の大きな助けになります。また、趣味の入力はプロフィール設定に移動して、最初のステップでは必須にしないのもいいかもしれません。",
-        sent_at: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-      },
-    ];
   };
 
   // 日付をフォーマットする関数
