@@ -16,10 +16,12 @@ import {
   Heart,
   Check,
   Clock,
+  LogOut,
 } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { logout } from "@/services/auth";
 
 // プロジェクト型定義
 interface Project {
@@ -160,6 +162,17 @@ export default function HomePage() {
   const [likedProjects, setLikedProjects] = useState<Project[]>([]);
   // ここにユーザーアイコン用の状態変数を追加
   const [userInitial, setUserInitial] = useState("ゲ"); // デフォルト値は「ゲ」(ゲスト)
+
+  // 修正/追加: ログアウト関数を追加
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "ログアウト成功",
+      description: "ログアウトしました",
+      variant: "default",
+    });
+    router.push("/login");
+  };
 
   // ログイン状態をチェックして未ログインならログインページへリダイレクト
   useEffect(() => {
@@ -732,6 +745,17 @@ export default function HomePage() {
             >
               <Bell className="h-5 w-5" />
             </Button>
+
+            {/* 修正: ログアウトボタンをより明確にする */}
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              size="sm"
+            >
+              ログアウト
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"

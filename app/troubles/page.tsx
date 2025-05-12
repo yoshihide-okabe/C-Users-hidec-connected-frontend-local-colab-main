@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Bell, Check } from "lucide-react";
+import { ChevronLeft, Bell, Users, Crown, LogOut, Check } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { useToast } from "@/hooks/use-toast";
 // インポート名を変更して衝突を回避
 import { TroubleList as TroubleListComponent } from "@/components/trouble-list";
 import { cn } from "@/lib/utils"; // ← cn関数をインポート追加
+// 修正/追加: ログアウト関数をインポート
+import { logout } from "@/services/auth";
 
 interface ProjectInfo {
   id: string;
@@ -54,6 +56,17 @@ export default function TroublesPage() {
   const [isLoading, setIsLoading] = useState(true);
   // 追加: 選択中のお困りごと状態
   const [selectedTrouble, setSelectedTrouble] = useState<Trouble | null>(null);
+
+  // 修正/追加: ログアウト処理のハンドラー関数
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "ログアウト成功",
+      description: "ログアウトしました",
+      variant: "default",
+    });
+    router.push("/login");
+  };
 
   // 追加: お困りごとが選択されたときのハンドラー
   const handleTroubleSelect = (trouble: Trouble) => {
@@ -259,6 +272,17 @@ export default function TroublesPage() {
             >
               <Bell className="h-5 w-5" />
             </Button>
+
+            {/* 修正/追加: ログアウトボタン */}
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              size="sm"
+            >
+              ログアウト
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"

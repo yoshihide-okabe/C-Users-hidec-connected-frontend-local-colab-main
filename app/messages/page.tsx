@@ -4,13 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageThread } from "@/components/message-thread";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Bell, Users, Crown } from "lucide-react";
+import { ChevronLeft, Bell, Users, Crown, LogOut } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Participant,
   getParticipantsByTroubleId,
 } from "@/services/participants";
+// 修正/追加: ログアウト関数をインポート
+import { logout } from "@/services/auth";
+// 修正/追加: useRouterとuseToastをインポート
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MessagesPage() {
   // お困りごと情報のステート
@@ -24,6 +29,21 @@ export default function MessagesPage() {
   // 参加者リストのステート
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 修正/追加: routerとtoastを初期化
+  const router = useRouter();
+  const { toast } = useToast();
+
+  // 修正/追加: ログアウト処理のハンドラー関数
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "ログアウト成功",
+      description: "ログアウトしました",
+      variant: "default",
+    });
+    router.push("/login");
+  };
 
   // コンポーネントマウント時にローカルストレージから情報を取得
   useEffect(() => {
@@ -93,6 +113,17 @@ export default function MessagesPage() {
             >
               <Bell className="h-5 w-5" />
             </Button>
+
+            {/* 修正/追加: ログアウトボタン */}
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              size="sm"
+            >
+              ログアウト
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"

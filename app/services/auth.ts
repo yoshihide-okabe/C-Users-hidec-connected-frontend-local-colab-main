@@ -234,4 +234,32 @@ export const logout = (): void => {
   localStorage.removeItem("userId");
   localStorage.removeItem("userName");
   localStorage.removeItem("isLoggedIn");
+
+  // 修正/追加: プロジェクト関連のデータクリア
+  localStorage.removeItem("selectedProjectId");
+  localStorage.removeItem("selectedProjectTitle");
+  localStorage.removeItem("selectedProjectDescription");
+  localStorage.removeItem("selectedProjectOwner");
+  localStorage.removeItem("selectedProjectCategory");
+
+  // 修正/追加: お困りごと関連のデータクリア
+  localStorage.removeItem("selectedTroubleId");
+  localStorage.removeItem("selectedTroubleDescription");
+  localStorage.removeItem("selectedTroubleStatus");
+  localStorage.removeItem("selectedTroubleCategory");
+
+  // 修正/追加: ユーザー情報のクリア
+  localStorage.removeItem("currentUserId");
+  localStorage.removeItem("currentUserName");
+
+  // 修正/追加: その他のアプリケーション固有のデータクリア
+  // アプリケーション内で使用している他のストレージアイテムがあれば追加
+
+  // 修正/追加: セッションストレージもクリア
+  sessionStorage.clear();
+
+  // 注: localStorage.clear()は他のアプリのデータも消す可能性があるため使用しない
+  console.log(
+    "ログアウト処理完了: すべてのローカルストレージデータをクリアしました"
+  );
 };
