@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { getProjects, toggleFavorite, Project } from "@/services/projects";
+// 修正/追加: ログアウト関数をインポート
+import { logout } from "@/services/auth";
 
 export default function ProjectsPage() {
   const params = useParams();
@@ -34,6 +36,17 @@ export default function ProjectsPage() {
       setUserInitial(userName.charAt(0));
     }
   }, []);
+
+  // 修正/追加: ログアウト処理のハンドラー関数
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "ログアウト成功",
+      description: "ログアウトしました",
+      variant: "default",
+    });
+    router.push("/login");
+  };
 
   // プロジェクト一覧を取得
   useEffect(() => {
@@ -77,7 +90,14 @@ export default function ProjectsPage() {
       setProjects(
         projects.map((project) =>
           project.id === projectId
-            ? { ...project, isFavorite: !isFavorite }
+            ? {
+                ...project,
+                isFavorite: !isFavorite,
+                // 修正: いいね数も更新
+                likesCount: !isFavorite
+                  ? project.likesCount + 1
+                  : Math.max(0, project.likesCount - 1),
+              }
             : project
         )
       );
@@ -294,11 +314,13 @@ export default function ProjectsPage() {
             <div className="flex gap-3">
               <span className="flex items-center text-lightgreen-600">
                 <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-                {project.likesCount || 0}
+                {/* 修正: 実際のいいね数を表示 */}
+                {project.likesCount}
               </span>
               <span className="flex items-center text-lightgreen-600">
                 <MessageCircle className="h-3.5 w-3.5 mr-1" />
-                {project.commentsCount || 0}
+                {/* 修正: 実際のコメント数を表示 */}
+                {project.commentsCount}
               </span>
             </div>
           </div>
@@ -331,6 +353,16 @@ export default function ProjectsPage() {
             >
               <Bell className="h-5 w-5" />
             </Button>
+            {/* 修正: ログアウトボタン */}
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              size="sm"
+            >
+              ログアウト
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
