@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/mobile-nav";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+// 修正/追加: プロジェクトサービス関数をインポート
 import { getProjects, toggleFavorite, Project } from "@/services/projects";
 // 修正/追加: ログアウト関数をインポート
 import { logout } from "@/services/auth";

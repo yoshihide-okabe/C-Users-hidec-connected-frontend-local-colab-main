@@ -40,6 +40,7 @@ interface Project {
   created_at?: string;
   isFavorite: boolean;
   is_favorite?: boolean;
+  // 修正: 必須のプロパティとして定義
   likesCount?: number;
   commentsCount?: number;
 }
@@ -225,6 +226,9 @@ export default function HomePage() {
               category: projectCategory,
               createdAt: new Date().toISOString(),
               isFavorite: false,
+              // 修正: 初期値を0に設定
+              likesCount: 0,
+              commentsCount: 0,
             });
           } catch (error) {
             console.error("プロジェクト情報の復元エラー:", error);

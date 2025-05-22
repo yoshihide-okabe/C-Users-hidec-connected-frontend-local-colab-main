@@ -57,6 +57,7 @@ export async function getProjects(
     }
 
     const data = await response.json();
+    console.log(`取得した${type}プロジェクトデータ:`, data); // 修正: レスポンスをログ出力
 
     // 修正: データの形式をチェック
     if (!Array.isArray(data)) {
@@ -85,8 +86,9 @@ export function formatProjects(data: any[]): Project[] {
     category: item.category_name || item.category?.name || "その他",
     createdAt: item.created_at || item.createdAt || new Date().toISOString(),
     isFavorite: item.is_favorite || item.isFavorite || false,
-    likesCount: item.likes || Math.floor(Math.random() * 40) + 5, // APIから返ってこない場合はダミー値
-    commentsCount: item.comments || Math.floor(Math.random() * 15) + 1, // APIから返ってこない場合はダミー値
+    // 修正: APIの実データを使用し、フォールバック値を設定
+    likesCount: typeof item.likes === "number" ? item.likes : 0,
+    commentsCount: typeof item.comments === "number" ? item.comments : 0,
   }));
 }
 
@@ -110,6 +112,8 @@ export async function getProjectById(projectId: number): Promise<Project> {
     }
 
     const data = await response.json();
+    // 修正: APIレスポンスをログ出力
+    console.log("プロジェクト詳細レスポンス:", data);
 
     // 修正: フォーマット関数を使用
     const formattedProjects = formatProjects([data]);
